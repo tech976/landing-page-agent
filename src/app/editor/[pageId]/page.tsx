@@ -33,6 +33,7 @@ import Link from "next/link";
 
 import "@measured/puck/puck.css";
 
+import { AiChatPanel, type AiEditResult } from "@/components/editor/AiChatPanel";
 import { pageToPuckData, puckDataToPage } from "@/lib/puck/adapter";
 import { puckConfig } from "@/lib/puck/config";
 import type { Page } from "@/lib/schema/page";
@@ -61,6 +62,27 @@ type SaveState =
   | { kind: "ok"; message: string }
   | { kind: "error"; message: string };
 
+/**
+ * Turns a raw API/provider error into one line a marketer can act on. The generation and
+ * edit paths can only fail in a few infrastructure ways (no key, plan/rate limit, model
+ * hiccup); a raw provider JSON blob in the chat reads as broken, so map the known classes to
+ * plain language and keep everything else short.
+ */
+function friendlyEditError(raw: string): string {
+  const m = raw.toLowerCase();
+  if (m.includes("api key") || m.includes("api_key") || m.includes("503") || m.includes("not configured")) {
+    return "AI editing isn’t connected yet. Add an API key in the app’s environment to turn it on.";
+  }
+  if (m.includes("rate_limit") || m.includes("payload too large") || m.includes("413") || m.includes("tokens per minute") || m.includes("429")) {
+    return "The AI model hit a size or rate limit on the current plan. This runs on Claude, or on Groq’s paid tier.";
+  }
+  if (m.includes("validation") || m.includes("schema")) {
+    return "The AI produced a change that didn’t fit the page rules and it was rejected. Try rephrasing the request.";
+  }
+  // Anything else: keep it, but don’t dump a giant JSON blob into the chat.
+  return raw.length > 180 ? `${raw.slice(0, 180)}…` : raw;
+}
+
 /* ────────────────────────────────────────────────────────────────────────────
    Route
    ──────────────────────────────────────────────────────────────────────────── */
@@ -80,6 +102,9 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
    * it a new key. This is the supported way to swap the document under the editor.
    */
   const [canvasVersion, setCanvasVersion] = useState(0);
+
+  /** Whether the AI chat panel is docked open. */
+  const [chatOpen, setChatOpen] = useState(false);
 
   /**
    * Latest canvas data, held in a ref rather than state: Puck's onChange fires on
@@ -177,9 +202,11 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
   /* ── AI edit pass ───────────────────────────────────────────────────────── */
 
   const runAiEdit = useCallback(
-    async (instruction: string) => {
+    async (instruction: string): Promise<AiEditResult> => {
       const base = currentPage();
-      if (!base || !instruction.trim()) return;
+      if (!base || !instruction.trim()) {
+        return { ok: false, message: "Nothing to edit yet." };
+      }
 
       setSaveState({ kind: "busy", message: "Applying AI edit…" });
 
@@ -194,6 +221,7 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
 
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
+          // A 503 here is the expected "no API key yet" case — surface its guidance verbatim.
           throw new Error(body.error ?? `AI edit failed (${res.status})`);
         }
 
@@ -206,11 +234,12 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
         setCanvasVersion((v) => v + 1);
         setDirty(true);
         setSaveState({ kind: "ok", message: "AI edit applied — review and publish" });
+        return { ok: true, message: "Done — I updated the page. Review it and hit Publish." };
       } catch (error) {
-        setSaveState({
-          kind: "error",
-          message: error instanceof Error ? error.message : "AI edit failed",
-        });
+        const raw = error instanceof Error ? error.message : "AI edit failed";
+        const friendly = friendlyEditError(raw);
+        setSaveState({ kind: "error", message: friendly });
+        return { ok: false, message: friendly };
       }
     },
     [pageId, currentPage],
@@ -232,23 +261,34 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
         page={page}
         dirty={dirty}
         saveState={saveState}
+        chatOpen={chatOpen}
+        onToggleChat={() => setChatOpen((v) => !v)}
         onPublish={() => publish()}
-        onAiEdit={runAiEdit}
       />
 
-      <div className="min-h-0 flex-1">
-        <Puck
-          key={canvasVersion}
-          config={puckConfig}
-          data={puckData}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onChange={(data: any) => {
-            latestDataRef.current = data;
-            setDirty((wasDirty) => wasDirty || true);
-          }}
-          onPublish={publish}
-          headerTitle={page.title}
-          headerPath={`/${page.slug}`}
+      {/* Canvas + docked chat panel share the row below the header. */}
+      <div className="flex min-h-0 flex-1">
+        <div className="min-h-0 flex-1">
+          <Puck
+            key={canvasVersion}
+            config={puckConfig}
+            data={puckData}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            onChange={(data: any) => {
+              latestDataRef.current = data;
+              setDirty((wasDirty) => wasDirty || true);
+            }}
+            onPublish={publish}
+            headerTitle={page.title}
+            headerPath={`/${page.slug}`}
+          />
+        </div>
+
+        <AiChatPanel
+          open={chatOpen}
+          onClose={() => setChatOpen(false)}
+          onEdit={runAiEdit}
+          busy={saveState.kind === "busy"}
         />
       </div>
     </div>
@@ -263,23 +303,18 @@ function EditorHeader({
   page,
   dirty,
   saveState,
+  chatOpen,
+  onToggleChat,
   onPublish,
-  onAiEdit,
 }: {
   page: Page;
   dirty: boolean;
   saveState: SaveState;
+  chatOpen: boolean;
+  onToggleChat: () => void;
   onPublish: () => void;
-  onAiEdit: (instruction: string) => void | Promise<void>;
 }) {
-  const [instruction, setInstruction] = useState("");
   const busy = saveState.kind === "busy";
-
-  const submitInstruction = async () => {
-    if (!instruction.trim() || busy) return;
-    await onAiEdit(instruction);
-    setInstruction("");
-  };
 
   return (
     <header className="flex flex-wrap items-center gap-3 border-b border-neutral-200 bg-white px-4 py-2.5">
@@ -298,35 +333,23 @@ function EditorHeader({
         </p>
       </div>
 
-      {/* AI edit box */}
-      <div className="order-last flex w-full min-w-0 items-center gap-2 sm:order-none sm:ml-4 sm:w-auto sm:flex-1">
-        <input
-          type="text"
-          value={instruction}
-          onChange={(event) => setInstruction(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              void submitInstruction();
-            }
-          }}
-          disabled={busy}
-          placeholder="Ask AI to edit — e.g. “make the hero headline shorter and add a COD trust chip”"
-          className="min-w-0 flex-1 rounded-md border border-neutral-300 px-3 py-1.5 text-sm outline-none placeholder:text-neutral-400 focus:border-neutral-500 disabled:opacity-50"
-          aria-label="AI edit instruction"
-        />
-        <button
-          type="button"
-          onClick={() => void submitInstruction()}
-          disabled={busy || !instruction.trim()}
-          className="shrink-0 rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-50"
-        >
-          Apply
-        </button>
-      </div>
-
       {/* Status + actions */}
       <div className="ml-auto flex shrink-0 items-center gap-3">
+        {/* Ask AI — opens the chat panel where the page is edited by prompt */}
+        <button
+          type="button"
+          onClick={onToggleChat}
+          aria-pressed={chatOpen}
+          className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            chatOpen
+              ? "bg-neutral-900 text-white hover:bg-neutral-800"
+              : "border border-neutral-300 text-neutral-800 hover:bg-neutral-50"
+          }`}
+        >
+          <span aria-hidden>✦</span>
+          Ask AI
+        </button>
+
         {saveState.kind !== "idle" ? (
           <span
             className={
