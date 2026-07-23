@@ -64,7 +64,7 @@
 
 import type { ComponentData, Data } from "@measured/puck";
 
-import { BLOCK_TYPES, type Block, type BlockType, type Page } from "@/lib/schema/page";
+import { BLOCK_TYPES, type Block, type BlockType, type FaqItem, type Page } from "@/lib/schema/page";
 
 /* ────────────────────────────────────────────────────────────────────────────
    Reserved prop keys
@@ -94,6 +94,75 @@ const RESERVED_PROPS = new Set<string>([
 ]);
 
 const BLOCK_TYPE_SET: ReadonlySet<string> = new Set(BLOCK_TYPES);
+
+/* ────────────────────────────────────────────────────────────────────────────
+   NESTED-EDITING PoC — faq-accordion `items` ⟷ faq-item slot children
+
+   THE ONE-LEVEL-DOWN MAPPING. The block↔ComponentData id mapping documented above
+   (block.id ⟷ componentData.props.id) is mirrored exactly one level deeper for FAQ
+   items, so nested editing inherits the same losslessness guarantee:
+
+              FaqItem.id  ⟷  faqItemComponentData.props.id
+
+   The canonical Page JSON is UNCHANGED: on disk and to the schema, faq-accordion still
+   has `props.items = FaqItem[]`. Only the Puck canvas sees these as slot children —
+   `pageToPuckData` expands them here and `puckDataToPage` collapses them back, in the
+   same order, carrying every FaqItem field (including ones with no sidebar field, such
+   as `cta`) straight through. This is deliberately faq-accordion-specific; no other
+   block is touched.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+const FAQ_ACCORDION_TYPE = "faq-accordion" as const;
+const FAQ_ITEM_TYPE = "faq-item" as const;
+
+/** FaqItem[] → faq-item slot children. `id` moves into Puck's reserved `props.id`. */
+function faqItemsToSlot(items: readonly FaqItem[]): ComponentData[] {
+  return items.map((item) => {
+    const { id, ...rest } = item;
+    return {
+      type: FAQ_ITEM_TYPE,
+      props: {
+        // Every remaining FaqItem field rides through verbatim — question, answer,
+        // group, and cta (which has no sidebar field) alike.
+        ...deepClone(rest as Record<string, unknown>),
+        [PUCK_ID_PROP]: id,
+      },
+    } as ComponentData;
+  });
+}
+
+/** faq-item slot children → FaqItem[], preserving order and each id. */
+function slotToFaqItems(slot: unknown): FaqItem[] {
+  if (!Array.isArray(slot)) return [];
+
+  const items: FaqItem[] = [];
+
+  for (const child of slot) {
+    const childProps = ((child as ComponentData | undefined)?.props ?? {}) as Record<string, unknown>;
+
+    const id = childProps[PUCK_ID_PROP];
+    if (typeof id !== "string" || id.length === 0) {
+      if (isDev) {
+        console.warn(
+          "[puck/adapter] Dropping an faq-item slot child with no usable props.id. " +
+            "Every FAQ item must carry a stable id — see the id-mapping note above.",
+        );
+      }
+      continue;
+    }
+
+    // Everything that is not a reserved Puck/envelope prop is a FaqItem field, verbatim.
+    const fields: Record<string, unknown> = {};
+    for (const key of Object.keys(childProps)) {
+      if (RESERVED_PROPS.has(key)) continue;
+      fields[key] = deepClone(childProps[key]);
+    }
+
+    items.push({ id, ...fields } as FaqItem);
+  }
+
+  return items;
+}
 
 /* ────────────────────────────────────────────────────────────────────────────
    Helpers
@@ -149,6 +218,14 @@ export function blockToComponentData(block: Block): ComponentData {
 
   if (block.notes !== undefined) {
     props[PUCK_NOTES_PROP] = block.notes;
+  }
+
+  // NESTED-EDITING PoC: expand faq-accordion's items (FaqItem[]) into faq-item slot
+  // children so each Q&A is individually clickable on the canvas. All other blocks are
+  // untouched; the `items` from the props spread above is replaced in place.
+  if (block.type === FAQ_ACCORDION_TYPE) {
+    const items = (block.props as { items?: FaqItem[] }).items ?? [];
+    props.items = faqItemsToSlot(items);
   }
 
   return { type: block.type, props } as ComponentData;
@@ -223,6 +300,13 @@ export function componentDataToBlock(item: ComponentData): Block | null {
   for (const key of Object.keys(rawProps)) {
     if (RESERVED_PROPS.has(key)) continue;
     props[key] = deepClone(rawProps[key]);
+  }
+
+  // NESTED-EDITING PoC: collapse faq-item slot children back into items: FaqItem[],
+  // preserving order and every item's id (and non-editable fields like `cta`). This
+  // overwrites the raw slot array that the loop above copied. Other blocks are untouched.
+  if (type === FAQ_ACCORDION_TYPE) {
+    props.items = slotToFaqItems(rawProps.items);
   }
 
   const block: Record<string, unknown> = {

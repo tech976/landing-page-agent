@@ -14,7 +14,7 @@
  * an instant open under `prefers-reduced-motion`.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ComponentType } from "react";
 import { ChevronDown, Headphones, MessageCircle, Smartphone } from "lucide-react";
 import type { ComponentConfig, Fields } from "@measured/puck";
 
@@ -109,6 +109,98 @@ function faqJsonLd(items: FaqItem[]): string {
       acceptedAnswer: { "@type": "Answer", text: item.answer },
     })),
   }).replace(/</g, "\\u003c");
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   FaqItemRow — a single Q&A row
+
+   Extracted from the accordion's item loop so the PRODUCTION accordion and the
+   Puck `faq-item` sub-component (nested-editing PoC) render BYTE-IDENTICAL markup.
+   It is controlled: the parent owns `isOpen`, because the production accordion
+   needs cross-item single/multiple-open logic while the editor gives each row a
+   local toggle. Nothing about this component is editor-aware.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+export function FaqItemRow({
+  item,
+  isOpen,
+  onToggle,
+}: {
+  item: FaqItem;
+  isOpen: boolean;
+  onToggle: (id: string) => void;
+}) {
+  const panelId = `faq-panel-${item.id}`;
+  const buttonId = `faq-button-${item.id}`;
+
+  return (
+    <li
+      className={cn(
+        "overflow-hidden rounded-xl border bg-surface-raised transition-[border-color,box-shadow] duration-[var(--dur-fast)]",
+        isOpen ? "border-primary shadow-card" : "border-border",
+      )}
+    >
+      <h3>
+        <button
+          type="button"
+          id={buttonId}
+          aria-expanded={isOpen}
+          aria-controls={panelId}
+          onClick={() => onToggle(item.id)}
+          className="flex min-h-[3.25rem] w-full items-center justify-between gap-3 px-4 py-3.5 text-left font-heading text-base font-bold tracking-tight text-fg-strong transition-colors duration-[var(--dur-fast)] hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-ring/60 sm:px-5 sm:text-lg"
+        >
+          <span className="line-clamp-2 text-pretty sm:line-clamp-none">{item.question}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className={cn(
+              "size-5 shrink-0 text-muted-fg transition-transform duration-[var(--dur-base)] ease-[var(--ease-out-soft)] motion-reduce:transition-none",
+              isOpen && "rotate-180 text-primary",
+            )}
+          />
+        </button>
+      </h3>
+
+      {/* 0fr → 1fr animates to natural content height, no JS measuring. */}
+      <div
+        id={panelId}
+        role="region"
+        aria-labelledby={buttonId}
+        /* `inert` (not `hidden`) — display:none would kill the height
+           animation, but collapsed content must still leave the tab order. */
+        inert={!isOpen}
+        className={cn(
+          "grid transition-[grid-template-rows] duration-[var(--dur-base)] ease-[var(--ease-out-soft)] motion-reduce:transition-none",
+          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="flex flex-col gap-3 px-4 pb-4 sm:px-5 sm:pb-5">
+            {paragraphs(item.answer).map((paragraph, index) => (
+              <p key={index} className="text-base leading-relaxed text-pretty text-fg">
+                {paragraph}
+              </p>
+            ))}
+
+            {item.cta ? (
+              <a
+                href={ctaHref(item.cta.action)}
+                target={item.cta.action.kind === "url" ? item.cta.action.target : undefined}
+                rel={
+                  item.cta.action.kind === "url" && item.cta.action.target === "_blank"
+                    ? (item.cta.action.rel ?? "noopener noreferrer")
+                    : undefined
+                }
+                data-cta-kind={item.cta.action.kind}
+                className="inline-flex h-11 min-h-11 w-fit items-center gap-2 rounded-[var(--radius-cta)] border-2 border-transparent px-4 font-heading text-sm font-bold tracking-tight text-primary transition-colors duration-[var(--dur-fast)] hover:bg-primary-soft hover:text-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/60 active:scale-[0.98]"
+              >
+                {item.cta.label}
+              </a>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </li>
+  );
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -228,81 +320,14 @@ export default function FaqAccordion({
             layout === "two-column" && "md:grid md:grid-cols-2 md:items-start md:gap-4",
           )}
         >
-          {visibleItems.map((item) => {
-            const isOpen = openIds.includes(item.id);
-            const panelId = `faq-panel-${item.id}`;
-            const buttonId = `faq-button-${item.id}`;
-
-            return (
-              <li
-                key={item.id}
-                className={cn(
-                  "overflow-hidden rounded-xl border bg-surface-raised transition-[border-color,box-shadow] duration-[var(--dur-fast)]",
-                  isOpen ? "border-primary shadow-card" : "border-border",
-                )}
-              >
-                <h3>
-                  <button
-                    type="button"
-                    id={buttonId}
-                    aria-expanded={isOpen}
-                    aria-controls={panelId}
-                    onClick={() => toggle(item.id)}
-                    className="flex min-h-[3.25rem] w-full items-center justify-between gap-3 px-4 py-3.5 text-left font-heading text-base font-bold tracking-tight text-fg-strong transition-colors duration-[var(--dur-fast)] hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-ring/60 sm:px-5 sm:text-lg"
-                  >
-                    <span className="line-clamp-2 text-pretty sm:line-clamp-none">{item.question}</span>
-                    <ChevronDown
-                      aria-hidden="true"
-                      className={cn(
-                        "size-5 shrink-0 text-muted-fg transition-transform duration-[var(--dur-base)] ease-[var(--ease-out-soft)] motion-reduce:transition-none",
-                        isOpen && "rotate-180 text-primary",
-                      )}
-                    />
-                  </button>
-                </h3>
-
-                {/* 0fr → 1fr animates to natural content height, no JS measuring. */}
-                <div
-                  id={panelId}
-                  role="region"
-                  aria-labelledby={buttonId}
-                  /* `inert` (not `hidden`) — display:none would kill the height
-                     animation, but collapsed content must still leave the tab order. */
-                  inert={!isOpen}
-                  className={cn(
-                    "grid transition-[grid-template-rows] duration-[var(--dur-base)] ease-[var(--ease-out-soft)] motion-reduce:transition-none",
-                    isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-                  )}
-                >
-                  <div className="overflow-hidden">
-                    <div className="flex flex-col gap-3 px-4 pb-4 sm:px-5 sm:pb-5">
-                      {paragraphs(item.answer).map((paragraph, index) => (
-                        <p key={index} className="text-base leading-relaxed text-pretty text-fg">
-                          {paragraph}
-                        </p>
-                      ))}
-
-                      {item.cta ? (
-                        <a
-                          href={ctaHref(item.cta.action)}
-                          target={item.cta.action.kind === "url" ? item.cta.action.target : undefined}
-                          rel={
-                            item.cta.action.kind === "url" && item.cta.action.target === "_blank"
-                              ? (item.cta.action.rel ?? "noopener noreferrer")
-                              : undefined
-                          }
-                          data-cta-kind={item.cta.action.kind}
-                          className="inline-flex h-11 min-h-11 w-fit items-center gap-2 rounded-[var(--radius-cta)] border-2 border-transparent px-4 font-heading text-sm font-bold tracking-tight text-primary transition-colors duration-[var(--dur-fast)] hover:bg-primary-soft hover:text-primary-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/60 active:scale-[0.98]"
-                        >
-                          {item.cta.label}
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
+          {visibleItems.map((item) => (
+            <FaqItemRow
+              key={item.id}
+              item={item}
+              isOpen={openIds.includes(item.id)}
+              onToggle={toggle}
+            />
+          ))}
         </ul>
 
         {/* ── Support CTA ──────────────────────────────────────────────── */}
@@ -380,18 +405,15 @@ export const faqAccordionPuckConfig: Omit<ComponentConfig<FaqAccordionProps>, "r
   fields: {
     heading: { type: "text", label: "Heading" },
     subheading: { type: "text", label: "Sub-heading" },
+    /* NESTED-EDITING PoC — `items` is a Puck SLOT (was an array field). Each item is
+       an individually-clickable, drag-reorderable `faq-item` card on the canvas. Only
+       `faq-item` may be dropped here. The canonical page schema is UNCHANGED: the
+       adapter (src/lib/puck/adapter.ts) expands `items: FaqItem[]` into these slot
+       children on the way into Puck and collapses them back on the way out. */
     items: {
-      type: "array",
+      type: "slot",
       label: "Questions (4–15)",
-      min: 4,
-      max: 15,
-      getItemSummary: (item: FaqItem) => item?.question ?? "Question",
-      arrayFields: {
-        id: { type: "text", label: "ID (stable — do not reuse)" },
-        question: { type: "text", label: "Question (customer's words)" },
-        answer: { type: "textarea", label: "Answer (blank line = new paragraph)" },
-        group: { type: "text", label: "Category ID (optional)" },
-      },
+      allow: ["faq-item"],
     },
     layout: {
       type: "select",
@@ -449,32 +471,49 @@ export const faqAccordionPuckConfig: Omit<ComponentConfig<FaqAccordionProps>, "r
   } as unknown as Fields<FaqAccordionProps>,
   defaultProps: {
     heading: "Frequently asked questions",
+    /* Slot-shaped default content (was FaqItem[]). Puck's `populateIds` re-mints the
+       accordion id AND every slot child id when a new block is dropped, so these
+       placeholder ids never collide across duplicated accordions. Cast through the
+       same `unknown` seam the slot `fields` use above: on the canvas `items` is a slot
+       (ComponentData[]), but the schema prop type is FaqItem[]. */
     items: [
       {
-        id: "faq_cod",
-        question: "Is Cash on Delivery available?",
-        answer:
-          "Yes. COD is available on 24,000+ pincodes across India at no extra charge. You pay the delivery partner in cash or by UPI when the parcel arrives.",
+        type: "faq-item",
+        props: {
+          id: "faq_cod",
+          question: "Is Cash on Delivery available?",
+          answer:
+            "Yes. COD is available on 24,000+ pincodes across India at no extra charge. You pay the delivery partner in cash or by UPI when the parcel arrives.",
+        },
       },
       {
-        id: "faq_ship",
-        question: "How long will delivery take to my city?",
-        answer:
-          "Metro cities get delivery in 2–3 working days. Tier 2 and 3 cities take 4–6 working days. You'll get a tracking link on WhatsApp within 24 hours of ordering.",
+        type: "faq-item",
+        props: {
+          id: "faq_ship",
+          question: "How long will delivery take to my city?",
+          answer:
+            "Metro cities get delivery in 2–3 working days. Tier 2 and 3 cities take 4–6 working days. You'll get a tracking link on WhatsApp within 24 hours of ordering.",
+        },
       },
       {
-        id: "faq_returns",
-        question: "What if it doesn't work for me?",
-        answer:
-          "Return it within 15 days for a full refund, even if the pack is opened. Message us on WhatsApp, we arrange a free pickup, and the refund reaches your account within 5 working days.",
+        type: "faq-item",
+        props: {
+          id: "faq_returns",
+          question: "What if it doesn't work for me?",
+          answer:
+            "Return it within 15 days for a full refund, even if the pack is opened. Message us on WhatsApp, we arrange a free pickup, and the refund reaches your account within 5 working days.",
+        },
       },
       {
-        id: "faq_gst",
-        question: "Is the price inclusive of GST and shipping?",
-        answer:
-          "Yes. The price you see is the final price you pay — GST included. Shipping is free on all orders above ₹499.",
+        type: "faq-item",
+        props: {
+          id: "faq_gst",
+          question: "Is the price inclusive of GST and shipping?",
+          answer:
+            "Yes. The price you see is the final price you pay — GST included. Shipping is free on all orders above ₹499.",
+        },
       },
-    ],
+    ] as unknown as FaqAccordionProps["items"],
     layout: "single-column",
     defaultOpen: ["faq_cod"],
     allowMultipleOpen: true,
@@ -484,3 +523,119 @@ export const faqAccordionPuckConfig: Omit<ComponentConfig<FaqAccordionProps>, "r
     background: "light",
   },
 };
+
+/* ────────────────────────────────────────────────────────────────────────────
+   NESTED-EDITING PoC — editor-only pieces (faq-item sub-component)
+
+   These are consumed ONLY by the Puck editor host (src/lib/puck/config.tsx). The
+   production render path (src/components/PageRenderer.tsx → default FaqAccordion)
+   never imports them, so the live page is unaffected.
+
+   • faqItemPuckConfig  — the sidebar fields shown when a marketer selects one item.
+   • FaqItemEditor      — how a single item renders as a card ON the canvas.
+   • FaqAccordionEditor — the accordion's editor render: chrome + the items SLOT.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Field config for the `faq-item` Puck component. Only the sidebar-editable FaqItem
+ * fields are listed. `id` lives in Puck's reserved `props.id` (it IS the component's
+ * identity — see the adapter's id-mapping note) and `cta` is carried through opaquely
+ * by the adapter, so neither is a field here.
+ */
+export const faqItemPuckConfig = {
+  label: "FAQ Item",
+  fields: {
+    question: { type: "text", label: "Question (customer's words)" },
+    answer: { type: "textarea", label: "Answer (blank line = new paragraph)" },
+    group: { type: "text", label: "Category ID (optional)" },
+  },
+  defaultProps: {
+    question: "New question?",
+    answer:
+      "Write the answer here. Leave a blank line between paragraphs to start a new one.",
+  },
+};
+
+/**
+ * Editor render for one `faq-item`. Reuses the shared `FaqItemRow` so a card on the
+ * canvas is byte-identical to a row in the production accordion. Wrapped in a `<ul>`
+ * so the `<li>` is valid, and given its own local open/close state (the production
+ * accordion's cross-item logic does not apply to a standalone card). `props.id` is
+ * Puck's injected component id — surfaced as a data-attribute for DOM inspection.
+ */
+export function FaqItemEditor(props: {
+  id?: string;
+  question?: string;
+  answer?: string;
+  group?: string;
+  cta?: FaqItem["cta"];
+  [key: string]: unknown;
+}) {
+  const id = typeof props.id === "string" && props.id.length > 0 ? props.id : "faq-item-preview";
+  const item: FaqItem = {
+    id,
+    question: props.question ?? "",
+    answer: props.answer ?? "",
+    ...(props.group ? { group: props.group } : {}),
+    ...(props.cta ? { cta: props.cta } : {}),
+  };
+
+  const [open, setOpen] = useState(true);
+
+  return (
+    <ul className="flex flex-col gap-3" data-lp-block-type="faq-item" data-lp-faq-item-id={id}>
+      <FaqItemRow item={item} isOpen={open} onToggle={() => setOpen((current) => !current)} />
+    </ul>
+  );
+}
+
+/**
+ * Editor render for `faq-accordion`. Mirrors the production chrome (section tone,
+ * heading, sub-heading) but, in place of the item loop, renders the `items` SLOT —
+ * which Puck injects into props as a component. Rendering `<Items />` is what mounts
+ * the drop zone that makes each faq-item individually clickable and drag-reorderable.
+ */
+export function FaqAccordionEditor(props: {
+  heading?: string;
+  subheading?: string;
+  background?: ToneToken;
+  items?: ComponentType;
+  [key: string]: unknown;
+}) {
+  const background = (props.background ?? "light") as ToneToken;
+  const Items = props.items;
+
+  return (
+    <section
+      className={cn("py-[var(--space-section)]", SECTION_TONE[background])}
+      aria-labelledby="faq-heading"
+    >
+      <div className="mx-auto w-full max-w-[var(--container-prose)] px-[var(--space-gutter)]">
+        <header className="flex flex-col gap-3 text-center">
+          <h2
+            id="faq-heading"
+            className={cn(
+              "font-heading text-3xl font-extrabold tracking-tight text-balance sm:text-4xl",
+              HEADING_TONE[background],
+            )}
+          >
+            {props.heading}
+          </h2>
+          {props.subheading ? (
+            <p
+              className={cn(
+                "mx-auto max-w-prose text-base text-pretty sm:text-lg",
+                SUB_TONE[background],
+              )}
+            >
+              {props.subheading}
+            </p>
+          ) : null}
+        </header>
+
+        {/* The SLOT — Puck renders each faq-item as a clickable, reorderable card. */}
+        <div className="mt-8">{Items ? <Items /> : null}</div>
+      </div>
+    </section>
+  );
+}

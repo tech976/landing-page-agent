@@ -43,6 +43,16 @@ import {
   type PuckComponentName,
 } from "@/components/blocks";
 
+/* NESTED-EDITING PoC (faq-accordion only). These editor-only pieces are imported
+   directly from the block file rather than through the registry, because faq-item is
+   deliberately NOT a member of the locked block registry — it is a canvas sub-item,
+   not a page-level block. See the wiring below `components`. */
+import {
+  FaqAccordionEditor,
+  FaqItemEditor,
+  faqItemPuckConfig,
+} from "@/components/blocks/FaqAccordion";
+
 /* ────────────────────────────────────────────────────────────────────────────
    Types
    ──────────────────────────────────────────────────────────────────────────── */
@@ -169,6 +179,36 @@ const components = Object.fromEntries(
   ]),
 ) as Record<PuckComponentName, ReturnType<typeof defineBlock>>;
 
+/* ════════════════════════════════════════════════════════════════════════════════
+   NESTED-EDITING PoC — faq-accordion only
+   ════════════════════════════════════════════════════════════════════════════════
+   Two surgical overrides on top of the auto-assembled `components` map:
+
+   1. faq-accordion uses a SLOT-AWARE editor render (FaqAccordionEditor) instead of the
+      production component. The production FaqAccordion takes `items: FaqItem[]`; in the
+      editor, `items` is a Puck slot injected as a component, so it needs a render that
+      outputs `<Items />`. Routed through `defineBlock` so it keeps the standard block
+      envelope wrapper (hidden/notes handling, data-lp-block-id).
+
+   2. faq-item is registered as a first-class Puck component so it can live inside the
+      slot with its own selectable sidebar fields. It is NOT wrapped by `defineBlock`
+      (no `_lpHidden` envelope — a sub-item is not a soft-deletable Block) and its render
+      keeps Puck's injected `props.id`, which FaqItemEditor surfaces for the DOM.
+
+   Nothing here generalises to other blocks — it is intentionally faq-accordion-specific.
+   ──────────────────────────────────────────────────────────────────────────────── */
+const componentsWithNesting = {
+  ...components,
+  "faq-accordion": defineBlock("faq-accordion", FaqAccordionEditor, allPuckConfigs["faq-accordion"]),
+  "faq-item": {
+    label: faqItemPuckConfig.label,
+    fields: faqItemPuckConfig.fields,
+    defaultProps: faqItemPuckConfig.defaultProps,
+    render: FaqItemEditor,
+  },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+} as Record<string, any>;
+
 /**
  * The Puck Config.
  *
@@ -201,9 +241,18 @@ export const puckConfig = {
       // Singletons on `page.fixtures` — must never be drag-reorderable. §3.
       visible: false,
     },
+    /* NESTED-EDITING PoC: faq-item is added ONLY inside an faq-accordion slot, never
+       dragged onto the page root. A component in no category would surface in Puck's
+       default "Other" drawer section, so — exactly as the fixtures do above — it is
+       parked in a `visible: false` category to keep it out of the drawer. */
+    "Nested items": {
+      title: "Nested items",
+      components: ["faq-item"],
+      visible: false,
+    },
   },
 
-  components,
+  components: componentsWithNesting,
 
   /**
    * Root fields. Only `title` is editable and round-tripped by the adapter; `pageId`
