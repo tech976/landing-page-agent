@@ -14,6 +14,7 @@
  * brief-specific lives in `buildUserMessage`, which renders after the cache breakpoint.
  */
 
+import { renderDomainProfile, resolveDomain } from "@/lib/generate/domains";
 import type {
   Brief,
   BriefOffer,
@@ -555,9 +556,29 @@ function variantDigest(product: BriefProduct): string {
  */
 export function buildUserMessage(brief: Brief): string {
   const { brand, product, offer, campaign, audience, style } = brief;
+  const domainProfile = resolveDomain(brief.domain ?? product.category);
 
   return `
 Generate the landing page for this brief.
+
+═══════════════════════════════════════════════════════════════════════════════
+VERTICAL PLAYBOOK — how a page in THIS market must be built
+═══════════════════════════════════════════════════════════════════════════════
+
+This brief is in the "${domainProfile.domain}" vertical${
+    brief.domain && brief.domain.toLowerCase() !== domainProfile.domain
+      ? ` (matched from "${brief.domain}")`
+      : ""
+  }. What converts here is not what converts everywhere. Apply this playbook on top of the
+general conversion rules — where it is more specific, it wins. It never overrides DATA
+INTEGRITY: a vertical that "expects" clinical proof does not license you to invent a clinical
+result the brief does not contain.
+
+${renderDomainProfile(domainProfile)}
+
+The SUGGESTED FLOW ORDER above adapts the DEFAULT ORDER for this vertical. Use it as your
+starting point, then apply the same brief-signal deviations (lead-gen, high-ticket, warm
+traffic, single-SKU) from the PAGE COMPOSITION rules.
 
 ═══════════════════════════════════════════════════════════════════════════════
 CAMPAIGN — the page must match this ad

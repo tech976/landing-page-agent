@@ -188,6 +188,13 @@ export const BriefStyleSchema = z.object({
    ──────────────────────────────────────────────────────────────────────────── */
 
 export const BriefSchema = z.object({
+  /**
+   * The market vertical, e.g. "fitness", "fashion", "beauty". Open free text on purpose —
+   * the generator resolves it to the closest DomainProfile (src/lib/generate/domains.ts) and
+   * falls back to a generic CRO profile for anything unrecognised, so any vertical is
+   * supported. Drives domain-aware page structure, proof selection, and ad-policy caution.
+   */
+  domain: z.string().max(60).optional(),
   brand: BriefBrandSchema,
   product: BriefProductSchema,
   offer: BriefOfferSchema,

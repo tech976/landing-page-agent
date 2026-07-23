@@ -27,6 +27,7 @@ import {
   BriefSchema,
 } from "@/lib/schema/brief";
 import { CHECKOUT_ACTION_KINDS, STYLE_PERSONALITIES } from "@/lib/schema/primitives";
+import { DOMAIN_OPTIONS } from "@/lib/generate/domains";
 import { cn, formatINR } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { Button, buttonStyles } from "@/components/ui/Button";
@@ -103,6 +104,8 @@ interface DraftFormField {
 }
 
 interface Draft {
+  /** Market vertical. Free text: a listed option value or a custom "Other" entry. */
+  domain: string;
   brand: {
     name: string;
     logoUrl: string;
@@ -186,6 +189,7 @@ interface Draft {
 }
 
 const EMPTY_DRAFT: Draft = {
+  domain: "",
   brand: {
     name: "",
     logoUrl: "",
@@ -269,6 +273,8 @@ function sampleDraft(): Draft {
     .slice(0, 16);
 
   return {
+    // Kumkumadi face oil is a skincare product — the beauty vertical playbook.
+    domain: "beauty",
     brand: {
       name: "Vanya Naturals",
       logoUrl: "https://cdn.vanyanaturals.in/brand/logo.png",
@@ -525,6 +531,7 @@ function buildDestination(destination: Draft["campaign"]["destination"]) {
 
 function toBrief(draft: Draft) {
   return {
+    domain: text(draft.domain),
     brand: {
       name: draft.brand.name.trim(),
       logoUrl: text(draft.brand.logoUrl),
@@ -718,8 +725,10 @@ export default function NewBriefPage() {
 
   /* ── Section updaters ───────────────────────────────────────────────────── */
 
+  // `domain` is a top-level string, not a section object, so it is excluded here —
+  // it has its own `setDomain` setter below.
   const patch = useCallback(
-    <K extends keyof Draft>(section: K, changes: Partial<Draft[K]>) => {
+    <K extends Exclude<keyof Draft, "domain">>(section: K, changes: Partial<Draft[K]>) => {
       setDraft((current) => ({ ...current, [section]: { ...current[section], ...changes } }));
     },
     [],
@@ -753,6 +762,12 @@ export default function NewBriefPage() {
     (changes: Partial<Draft["style"]>) => patch("style", changes),
     [patch],
   );
+
+  // `domain` is a top-level string, not a section object, so it gets its own setter
+  // rather than going through `patch`.
+  const setDomain = useCallback((next: string) => {
+    setDraft((current) => ({ ...current, domain: next }));
+  }, []);
 
   const setDestination = useCallback(
     (changes: Partial<Draft["campaign"]["destination"]>) => {
@@ -956,7 +971,13 @@ export default function NewBriefPage() {
             </div>
 
             {step.id === "brand" ? (
-              <BrandStep value={draft.brand} onChange={setBrand} errors={errors} />
+              <BrandStep
+                value={draft.brand}
+                onChange={setBrand}
+                errors={errors}
+                domain={draft.domain}
+                onDomainChange={setDomain}
+              />
             ) : null}
             {step.id === "product" ? (
               <ProductStep value={draft.product} onChange={setProduct} errors={errors} />
@@ -1199,9 +1220,89 @@ function ColorField({
   );
 }
 
-function BrandStep({ value, onChange, errors }: StepProps<Draft["brand"]>) {
+/** Sentinel select value that reveals the free-text vertical input. */
+const DOMAIN_OTHER = "__other__";
+
+/** "baby_kids" → "Baby Kids". Display only — the stored value is left untouched. */
+function prettyDomain(value: string): string {
+  return value
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+/**
+ * Market-vertical picker. A native select backed by DOMAIN_OPTIONS, plus an
+ * "Other" escape hatch that reveals a free-text input for a vertical not in the
+ * list. The field is OPTIONAL — an empty value maps to the generator's generic
+ * fallback, so "Not specified" stays re-selectable (it is not a disabled placeholder).
+ */
+function DomainField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const isListed = DOMAIN_OPTIONS.some((option) => option.value === value);
+  // "Other" is active when the user picks it, or when a restored draft carries a
+  // custom (non-empty, non-listed) vertical.
+  const [other, setOther] = useState(value !== "" && !isListed);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Select
+        label="Market / vertical"
+        value={other ? DOMAIN_OTHER : value}
+        onChange={(event) => {
+          const next = event.target.value;
+          if (next === DOMAIN_OTHER) {
+            setOther(true);
+            onChange("");
+          } else {
+            setOther(false);
+            onChange(next);
+          }
+        }}
+        hint="Pick the market your product sells in — the page is optimized differently for each. Not listed? Type your own."
+      >
+        <option value="">Not specified</option>
+        {DOMAIN_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {prettyDomain(option.label)}
+          </option>
+        ))}
+        <option value={DOMAIN_OTHER}>Other — type your own</option>
+      </Select>
+
+      {other ? (
+        <Input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="e.g. pet care, stationery, travel"
+          aria-label="Custom vertical"
+          maxLength={60}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function BrandStep({
+  value,
+  onChange,
+  errors,
+  domain,
+  onDomainChange,
+}: StepProps<Draft["brand"]> & {
+  domain: string;
+  onDomainChange: (next: string) => void;
+}) {
   return (
     <div className="flex flex-col gap-5">
+      <DomainField value={domain} onChange={onDomainChange} />
+
       <Input
         label="Brand name"
         requiredMark
