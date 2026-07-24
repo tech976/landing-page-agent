@@ -97,9 +97,17 @@ export function AiChatPanel({
       aria-label="AI assistant"
       aria-hidden={!open}
       className={cn(
-        "flex h-full w-[360px] max-w-[85vw] shrink-0 flex-col border-l border-app-border bg-app-surface transition-[margin] duration-200 ease-out",
-        open ? "mr-0" : "-mr-[360px] max-[420px]:-mr-[85vw]",
+        // Overlays the right edge of the canvas (absolute) instead of taking flex width, so
+        // opening it never squeezes the Puck editor. The slide is an INLINE transform, not a
+        // Tailwind translate-x class — the utility class was not being generated reliably in
+        // this build, which left the closed panel on-screen. Inline style always applies.
+        "absolute inset-y-0 right-0 z-30 flex w-[380px] max-w-[92vw] flex-col border-l border-app-border bg-app-surface shadow-2xl",
+        !open && "pointer-events-none",
       )}
+      style={{
+        transform: open ? "translateX(0)" : "translateX(101%)",
+        transition: "transform 200ms cubic-bezier(0.22,1,0.36,1)",
+      }}
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-app-border px-4 py-3">

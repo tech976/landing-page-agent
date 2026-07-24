@@ -63,9 +63,15 @@ export function CroPanel({
     <aside
       aria-label="CRO score"
       aria-hidden={!open}
-      className={`flex h-full w-[380px] max-w-[88vw] shrink-0 flex-col border-l border-app-border bg-app-surface transition-[margin] duration-200 ease-out ${
-        open ? "mr-0" : "-mr-[380px] max-[440px]:-mr-[88vw]"
+      className={`absolute inset-y-0 right-0 z-30 flex w-[400px] max-w-[92vw] flex-col border-l border-app-border bg-app-surface shadow-2xl ${
+        open ? "" : "pointer-events-none"
       }`}
+      // Inline slide transform (not a Tailwind translate-x class, which wasn't generating
+      // reliably here — see AiChatPanel). Guarantees the closed panel is off-screen.
+      style={{
+        transform: open ? "translateX(0)" : "translateX(101%)",
+        transition: "transform 200ms cubic-bezier(0.22,1,0.36,1)",
+      }}
     >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-app-border px-4 py-3">

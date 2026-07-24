@@ -30,7 +30,7 @@
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ExternalLink, Sparkles } from "lucide-react";
+import { ArrowLeft, ExternalLink, Sparkles } from "lucide-react";
 
 import "@measured/puck/puck.css";
 
@@ -112,19 +112,18 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
   const [canvasVersion, setCanvasVersion] = useState(0);
 
   /**
-   * The two docked right-hand panels — AI chat and CRO score. Mutually exclusive so they
-   * never fight for the same strip of screen; opening one closes the other.
+   * The right-hand overlay panels — AI chat and CRO score. A SINGLE state makes it
+   * structurally impossible for both to be open at once (two cross-closing booleans raced),
+   * so only ever one panel overlays the canvas.
    */
-  const [chatOpen, setChatOpen] = useState(false);
-  const [croOpen, setCroOpen] = useState(false);
-  const openChat = useCallback((v: boolean) => {
-    setChatOpen(v);
-    if (v) setCroOpen(false);
-  }, []);
-  const openCro = useCallback((v: boolean) => {
-    setCroOpen(v);
-    if (v) setChatOpen(false);
-  }, []);
+  const [activePanel, setActivePanel] = useState<"none" | "chat" | "cro">("none");
+  const chatOpen = activePanel === "chat";
+  const croOpen = activePanel === "cro";
+  const toggle = useCallback(
+    (panel: "chat" | "cro") => setActivePanel((p) => (p === panel ? "none" : panel)),
+    [],
+  );
+  const closePanels = useCallback(() => setActivePanel("none"), []);
 
   /**
    * Latest canvas data, held in a ref rather than state: Puck's onChange fires on
@@ -314,15 +313,18 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
         dirty={dirty}
         saveState={saveState}
         chatOpen={chatOpen}
-        onToggleChat={() => openChat(!chatOpen)}
+        onToggleChat={() => toggle("chat")}
         croOpen={croOpen}
         croReport={baseReport}
-        onToggleCro={() => openCro(!croOpen)}
+        onToggleCro={() => toggle("cro")}
         onPublish={() => publish()}
       />
 
-      {/* Canvas + docked panels (chat, CRO) share the row below the header. */}
-      <div className="flex min-h-0 flex-1">
+      {/* Canvas fills the row; the chat and CRO panels OVERLAY the right edge (absolute,
+          see each panel) rather than taking flex width — otherwise they squeeze Puck (which
+          already has its own left drawer + right panel) into an unusable sliver. `relative`
+          is the positioning context for those overlays. */}
+      <div className="relative flex min-h-0 flex-1">
         <div className="min-h-0 flex-1">
           <Puck
             key={canvasVersion}
@@ -343,23 +345,31 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
           />
         </div>
 
-        <AiChatPanel
-          open={chatOpen}
-          onClose={() => openChat(false)}
-          onEdit={runAiEdit}
-          busy={saveState.kind === "busy"}
-        />
+        {/* Only the active panel is mounted — structurally impossible for both to overlay at
+            once, regardless of CSS. Each is an absolute right-edge overlay (never steals Puck's
+            width). Chat mounts fresh per open, which is fine: the transcript is a per-session
+            convenience, not saved state. */}
+        {chatOpen ? (
+          <AiChatPanel
+            open
+            onClose={closePanels}
+            onEdit={runAiEdit}
+            busy={saveState.kind === "busy"}
+          />
+        ) : null}
 
-        <CroPanel
-          open={croOpen}
-          onClose={() => openCro(false)}
-          computeReport={computeReport}
-          onFix={(instruction) => {
-            openChat(true); // show the edit land in the chat transcript
-            void runAiEdit(instruction);
-          }}
-          aiBusy={saveState.kind === "busy"}
-        />
+        {croOpen ? (
+          <CroPanel
+            open
+            onClose={closePanels}
+            computeReport={computeReport}
+            onFix={(instruction) => {
+              setActivePanel("chat"); // show the edit land in the chat transcript
+              void runAiEdit(instruction);
+            }}
+            aiBusy={saveState.kind === "busy"}
+          />
+        ) : null}
       </div>
     </div>
   );
@@ -394,6 +404,16 @@ function EditorHeader({
 
   return (
     <header className="flex flex-wrap items-center gap-3 border-b border-app-border bg-app-surface px-4 py-2.5">
+      {/* Back to dashboard */}
+      <Link
+        href="/"
+        title="Back to dashboard"
+        className="flex shrink-0 items-center gap-1.5 rounded-md border border-app-border px-2.5 py-1.5 text-sm font-medium text-app-fg-muted transition-colors hover:bg-app-surface-2 hover:text-app-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-ring/60"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        <span className="hidden sm:inline">Dashboard</span>
+      </Link>
+
       {/* Title */}
       <div className="min-w-0">
         <div className="flex items-center gap-2">
