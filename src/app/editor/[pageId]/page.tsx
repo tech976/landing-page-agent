@@ -30,6 +30,7 @@
 import { use, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { ExternalLink, Sparkles } from "lucide-react";
 
 import "@measured/puck/puck.css";
 
@@ -37,6 +38,10 @@ import { AiChatPanel, type AiEditResult } from "@/components/editor/AiChatPanel"
 import { pageToPuckData, puckDataToPage } from "@/lib/puck/adapter";
 import { puckConfig } from "@/lib/puck/config";
 import type { Page } from "@/lib/schema/page";
+import { Badge } from "@/components/ui/Badge";
+import { Button, buttonStyles } from "@/components/ui/Button";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { cn } from "@/lib/utils";
 
 /** Puck touches `window` on mount — keep it out of the server render entirely. */
 const Puck = dynamic(() => import("@measured/puck").then((mod) => mod.Puck), {
@@ -50,7 +55,7 @@ const Puck = dynamic(() => import("@measured/puck").then((mod) => mod.Puck), {
 
 function CanvasMessage({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-full w-full items-center justify-center p-8 text-sm text-neutral-500">
+    <div className="flex h-full w-full items-center justify-center p-8 text-sm text-app-fg-muted">
       {children}
     </div>
   );
@@ -317,69 +322,72 @@ function EditorHeader({
   const busy = saveState.kind === "busy";
 
   return (
-    <header className="flex flex-wrap items-center gap-3 border-b border-neutral-200 bg-white px-4 py-2.5">
+    <header className="flex flex-wrap items-center gap-3 border-b border-app-border bg-app-surface px-4 py-2.5">
       {/* Title */}
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <h1 className="truncate text-sm font-semibold text-neutral-900">{page.title}</h1>
+          <h1 className="truncate font-heading text-sm font-bold tracking-tight text-app-fg">
+            {page.title}
+          </h1>
           {dirty ? (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+            <Badge tone="warning" variant="soft" dot>
               Unsaved
-            </span>
+            </Badge>
           ) : null}
         </div>
-        <p className="truncate text-xs text-neutral-500">
+        <p className="truncate text-xs text-app-fg-muted">
           /{page.slug} · {page.status}
         </p>
       </div>
 
       {/* Status + actions */}
-      <div className="ml-auto flex shrink-0 items-center gap-3">
-        {/* Ask AI — opens the chat panel where the page is edited by prompt */}
-        <button
-          type="button"
-          onClick={onToggleChat}
-          aria-pressed={chatOpen}
-          className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            chatOpen
-              ? "bg-neutral-900 text-white hover:bg-neutral-800"
-              : "border border-neutral-300 text-neutral-800 hover:bg-neutral-50"
-          }`}
-        >
-          <span aria-hidden>✦</span>
-          Ask AI
-        </button>
-
+      <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2 sm:gap-3">
         {saveState.kind !== "idle" ? (
           <span
-            className={
-              saveState.kind === "error"
-                ? "text-xs text-red-600"
-                : "text-xs text-neutral-500"
-            }
+            className={cn(
+              "text-xs",
+              saveState.kind === "error" ? "text-app-danger" : "text-app-fg-muted",
+            )}
             role="status"
           >
             {saveState.message}
           </span>
         ) : null}
 
+        {/* Ask AI — opens the chat panel where the page is edited by prompt */}
+        <button
+          type="button"
+          onClick={onToggleChat}
+          aria-pressed={chatOpen}
+          className={buttonStyles({
+            variant: "secondary",
+            size: "sm",
+            className: cn(
+              "gap-1.5",
+              chatOpen &&
+                "border-app-accent bg-app-accent-soft text-app-accent hover:bg-app-accent-soft hover:text-app-accent",
+            ),
+          })}
+        >
+          <Sparkles className="size-4" aria-hidden />
+          Ask AI
+        </button>
+
+        <ThemeToggle />
+
         <Link
           href={`/preview/${page.id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+          className={buttonStyles({ variant: "ghost", size: "sm" })}
         >
+          <ExternalLink className="size-4" aria-hidden />
           Preview
         </Link>
 
-        <button
-          type="button"
-          onClick={onPublish}
-          disabled={busy}
-          className="rounded-md bg-neutral-900 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
-        >
+        <Button variant="primary" size="sm" onClick={onPublish} disabled={busy}>
           Publish
-        </button>
+        </Button>
       </div>
     </header>
   );

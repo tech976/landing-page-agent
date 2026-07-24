@@ -14,30 +14,35 @@ import { cn } from "@/lib/utils";
 export type BadgeTone = "neutral" | "brand" | "accent" | "success" | "warning" | "danger";
 export type BadgeVariant = "soft" | "solid" | "outline";
 
+// The app-chrome namespace has a single accent (product indigo), so `brand` and
+// `accent` tones intentionally resolve to the same swatch. `text-app-accent-fg` is
+// the knockout white used on filled success/danger. `warning` uses `text-app-fg`
+// because there is no app-warning foreground token (warning stays a bright amber in
+// both themes — see report flag).
 const TONE_CLASSES: Record<BadgeVariant, Record<BadgeTone, string>> = {
   soft: {
-    neutral: "bg-muted text-fg",
-    brand: "bg-primary-soft text-primary",
-    accent: "bg-accent-soft text-accent",
-    success: "bg-success-soft text-success-fg",
-    warning: "bg-warning-soft text-warning-fg",
-    danger: "bg-danger-soft text-danger-fg",
+    neutral: "bg-app-surface-2 text-app-fg",
+    brand: "bg-app-accent-soft text-app-accent",
+    accent: "bg-app-accent-soft text-app-accent",
+    success: "bg-app-success-soft text-app-success",
+    warning: "bg-app-warning-soft text-app-fg",
+    danger: "bg-app-danger-soft text-app-danger",
   },
   solid: {
-    neutral: "bg-secondary text-on-secondary",
-    brand: "bg-primary text-on-primary",
-    accent: "bg-accent text-on-accent",
-    success: "bg-success text-surface",
-    warning: "bg-warning text-warning-fg",
-    danger: "bg-danger text-surface",
+    neutral: "bg-app-border-strong text-app-fg",
+    brand: "bg-app-accent text-app-accent-fg",
+    accent: "bg-app-accent text-app-accent-fg",
+    success: "bg-app-success text-app-accent-fg",
+    warning: "bg-app-warning text-app-fg",
+    danger: "bg-app-danger text-app-accent-fg",
   },
   outline: {
-    neutral: "border border-border-strong text-fg",
-    brand: "border border-primary text-primary",
-    accent: "border border-accent text-accent",
-    success: "border border-success text-success-fg",
-    warning: "border border-warning text-warning-fg",
-    danger: "border border-danger text-danger-fg",
+    neutral: "border border-app-border-strong text-app-fg",
+    brand: "border border-app-accent text-app-accent",
+    accent: "border border-app-accent text-app-accent",
+    success: "border border-app-success text-app-success",
+    warning: "border border-app-warning text-app-fg",
+    danger: "border border-app-danger text-app-danger",
   },
 };
 

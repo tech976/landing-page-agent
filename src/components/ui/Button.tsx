@@ -27,29 +27,31 @@ const BASE =
   "rounded-[var(--radius-cta)] " +
   "transition-[background-color,box-shadow,transform,border-color,color] " +
   "duration-[var(--dur-fast)] ease-[var(--ease-out-soft)] " +
-  "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/60 " +
-  "focus-visible:ring-offset-2 focus-visible:ring-offset-surface " +
+  "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-ring/60 " +
+  "focus-visible:ring-offset-2 focus-visible:ring-offset-app-bg " +
   "disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none " +
   "aria-disabled:opacity-50 aria-disabled:pointer-events-none " +
   "active:duration-[var(--dur-instant)]";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
+  // `shadow-cta`/`shadow-cta-hover` are brand-tinted (re-color on landing-brand swap),
+  // so the app primary uses neutral elevation shadows instead — never brand color.
   primary:
-    "bg-primary text-on-primary shadow-cta " +
-    "hover:bg-primary-hover hover:shadow-cta-hover hover:-translate-y-0.5 " +
-    "active:bg-primary-active active:translate-y-0 active:scale-[0.98] active:shadow-cta",
+    "bg-app-accent text-app-accent-fg shadow-sm " +
+    "hover:bg-app-accent-hover hover:shadow-card hover:-translate-y-0.5 " +
+    "active:bg-app-accent-hover active:translate-y-0 active:scale-[0.98] active:shadow-sm",
   secondary:
-    "bg-surface text-fg-strong border-2 border-border-strong shadow-xs " +
-    "hover:bg-surface-sunken hover:border-primary hover:text-primary " +
-    "active:bg-muted active:scale-[0.98]",
+    "bg-app-surface text-app-fg border-2 border-app-border-strong shadow-xs " +
+    "hover:bg-app-surface-2 hover:border-app-accent hover:text-app-accent " +
+    "active:bg-app-surface-2 active:scale-[0.98]",
   ghost:
-    "bg-transparent text-fg border-2 border-transparent " +
-    "hover:bg-muted hover:text-fg-strong " +
-    "active:bg-muted active:scale-[0.98]",
-  // `text-surface` is knockout text — the page-background token used as a foreground
-  // on a filled danger swatch. Still a token, never a literal white.
+    "bg-transparent text-app-fg border-2 border-transparent " +
+    "hover:bg-app-surface-2 hover:text-app-fg " +
+    "active:bg-app-surface-2 active:scale-[0.98]",
+  // `text-app-accent-fg` is the app knockout white (pure white in both themes) used
+  // as a foreground on the filled danger swatch. Still a token, never a literal white.
   danger:
-    "bg-danger text-surface shadow-xs " +
+    "bg-app-danger text-app-accent-fg shadow-xs " +
     "hover:brightness-95 hover:-translate-y-0.5 " +
     "active:translate-y-0 active:scale-[0.98]",
 };

@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import type * as React from "react";
 
+import { applyThemeScript } from "@/components/ui/ThemeToggle";
+
 import "./globals.css";
 
 /**
@@ -78,8 +80,16 @@ export default function RootLayout({
       // attribute is present — without it, every route change animates a scroll.
       data-scroll-behavior="smooth"
       className={`${plusJakarta.variable} ${inter.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col bg-surface text-fg" style={APP_FONT_TOKENS}>
+      <head>
+        {/* Sets data-theme before first paint so there is no light→dark flash. */}
+        <script dangerouslySetInnerHTML={{ __html: applyThemeScript }} />
+      </head>
+      <body
+        className="app-shell flex min-h-full flex-col bg-app-bg text-app-fg"
+        style={APP_FONT_TOKENS}
+      >
         {children}
       </body>
     </html>

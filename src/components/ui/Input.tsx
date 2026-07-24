@@ -18,15 +18,17 @@ import { FieldError, FieldHint, Label } from "@/components/ui/Label";
  */
 
 export const CONTROL_BASE =
-  "w-full rounded-md border bg-surface px-3 " +
-  "font-body text-base text-fg placeholder:text-muted-fg " +
+  "w-full rounded-md border bg-app-surface px-3 " +
+  "font-body text-base text-app-fg placeholder:text-app-fg-muted " +
   "transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out-soft)] " +
-  "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/40 " +
-  "disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-surface-sunken " +
-  "read-only:bg-surface-sunken";
+  "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-ring/40 " +
+  "disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-app-surface-2 " +
+  "read-only:bg-app-surface-2";
 
-export const CONTROL_VALID = "border-border hover:border-border-strong focus-visible:border-primary";
-export const CONTROL_INVALID = "border-danger focus-visible:border-danger focus-visible:ring-danger/30";
+export const CONTROL_VALID =
+  "border-app-border hover:border-app-border-strong focus-visible:border-app-accent";
+export const CONTROL_INVALID =
+  "border-app-danger focus-visible:border-app-danger focus-visible:ring-app-danger/30";
 
 // `prefix` is omitted from the base props deliberately: React's HTMLAttributes
 // already declares it as the RDFa string attribute, and we want a ReactNode.
@@ -91,7 +93,7 @@ export function Input({
         <div className="relative">
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-body text-base text-muted-fg"
+            className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-body text-base text-app-fg-muted"
           >
             {prefix}
           </span>

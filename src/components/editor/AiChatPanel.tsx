@@ -16,6 +16,9 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { ArrowUp, Sparkles, X } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 
 export interface AiEditResult {
   ok: boolean;
@@ -93,28 +96,32 @@ export function AiChatPanel({
     <aside
       aria-label="AI assistant"
       aria-hidden={!open}
-      className={`flex h-full w-[360px] max-w-[85vw] shrink-0 flex-col border-l border-neutral-200 bg-white transition-[margin] duration-200 ease-out ${
-        open ? "mr-0" : "-mr-[360px] max-[420px]:-mr-[85vw]"
-      }`}
+      className={cn(
+        "flex h-full w-[360px] max-w-[85vw] shrink-0 flex-col border-l border-app-border bg-app-surface transition-[margin] duration-200 ease-out",
+        open ? "mr-0" : "-mr-[360px] max-[420px]:-mr-[85vw]",
+      )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span aria-hidden className="grid size-6 place-items-center rounded-md bg-neutral-900 text-[13px] text-white">
-            ✦
+      <div className="flex items-center justify-between border-b border-app-border px-4 py-3">
+        <div className="flex items-center gap-2.5">
+          <span
+            aria-hidden
+            className="grid size-7 place-items-center rounded-lg bg-app-accent text-app-accent-fg shadow-sm"
+          >
+            <Sparkles className="size-4" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-neutral-900">AI Assistant</p>
-            <p className="text-[11px] text-neutral-500">Edit this page by prompt</p>
+            <p className="font-heading text-sm font-bold tracking-tight text-app-fg">AI Assistant</p>
+            <p className="text-[11px] text-app-fg-muted">Edit this page by prompt</p>
           </div>
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close AI assistant"
-          className="grid size-7 place-items-center rounded-md text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+          className="grid size-8 place-items-center rounded-md text-app-fg-muted transition-colors hover:bg-app-surface-2 hover:text-app-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-ring/60"
         >
-          ✕
+          <X className="size-4" aria-hidden />
         </button>
       </div>
 
@@ -122,12 +129,12 @@ export function AiChatPanel({
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {messages.length === 0 ? (
           <div className="space-y-3">
-            <p className="text-sm text-neutral-600">
+            <p className="text-sm text-app-fg-muted">
               Describe a change and I&rsquo;ll update the page. I edit what you&rsquo;re looking at
-              right now — review the result and hit <span className="font-medium">Publish</span>{" "}
-              when you&rsquo;re happy.
+              right now — review the result and hit{" "}
+              <span className="font-medium text-app-fg">Publish</span> when you&rsquo;re happy.
             </p>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-app-fg-muted">
               Try one
             </p>
             <div className="flex flex-col gap-2">
@@ -137,7 +144,7 @@ export function AiChatPanel({
                   type="button"
                   disabled={busy}
                   onClick={() => void send(p)}
-                  className="rounded-lg border border-neutral-200 px-3 py-2 text-left text-sm text-neutral-700 hover:border-neutral-400 hover:bg-neutral-50 disabled:opacity-50"
+                  className="rounded-lg border border-app-border bg-app-surface px-3 py-2 text-left text-sm text-app-fg transition-colors hover:border-app-accent hover:bg-app-accent-soft hover:text-app-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-ring/60 disabled:opacity-50"
                 >
                   {p}
                 </button>
@@ -148,18 +155,19 @@ export function AiChatPanel({
           messages.map((m) =>
             m.role === "user" ? (
               <div key={m.id} className="flex justify-end">
-                <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-neutral-900 px-3 py-2 text-sm text-white">
+                <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-app-accent px-3 py-2 text-sm text-app-accent-fg shadow-sm">
                   {m.text}
                 </div>
               </div>
             ) : (
               <div key={m.id} className="flex justify-start">
                 <div
-                  className={`max-w-[85%] rounded-2xl rounded-bl-sm px-3 py-2 text-sm ${
+                  className={cn(
+                    "max-w-[85%] rounded-2xl rounded-bl-sm border px-3 py-2 text-sm",
                     m.tone === "error"
-                      ? "bg-red-50 text-red-700"
-                      : "bg-neutral-100 text-neutral-800"
-                  }`}
+                      ? "border-app-danger/30 bg-app-danger-soft text-app-danger"
+                      : "border-app-border bg-app-surface-2 text-app-fg",
+                  )}
                 >
                   {m.text}
                 </div>
@@ -170,18 +178,18 @@ export function AiChatPanel({
 
         {busy ? (
           <div className="flex justify-start">
-            <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm bg-neutral-100 px-3 py-2.5">
-              <span className="size-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.2s]" />
-              <span className="size-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:-0.1s]" />
-              <span className="size-1.5 animate-bounce rounded-full bg-neutral-400" />
+            <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm border border-app-border bg-app-surface-2 px-3 py-2.5">
+              <span className="size-1.5 animate-bounce rounded-full bg-app-fg-muted [animation-delay:-0.2s]" />
+              <span className="size-1.5 animate-bounce rounded-full bg-app-fg-muted [animation-delay:-0.1s]" />
+              <span className="size-1.5 animate-bounce rounded-full bg-app-fg-muted" />
             </div>
           </div>
         ) : null}
       </div>
 
       {/* Composer */}
-      <div className="border-t border-neutral-200 p-3">
-        <div className="flex items-end gap-2 rounded-xl border border-neutral-300 bg-white p-2 focus-within:border-neutral-500">
+      <div className="border-t border-app-border p-3">
+        <div className="flex items-end gap-2 rounded-xl border border-app-border-strong bg-app-surface-2 p-2 transition-colors focus-within:border-app-accent focus-within:ring-2 focus-within:ring-app-ring/40">
           <textarea
             ref={inputRef}
             value={draft}
@@ -195,7 +203,7 @@ export function AiChatPanel({
             disabled={busy}
             rows={2}
             placeholder="Ask AI to change the page…"
-            className="min-h-0 flex-1 resize-none bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400 disabled:opacity-50"
+            className="min-h-0 flex-1 resize-none bg-transparent text-sm text-app-fg outline-none placeholder:text-app-fg-muted disabled:opacity-50"
             aria-label="Message the AI assistant"
           />
           <button
@@ -203,12 +211,12 @@ export function AiChatPanel({
             onClick={() => void send(draft)}
             disabled={busy || !draft.trim()}
             aria-label="Send"
-            className="grid size-8 shrink-0 place-items-center rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-40"
+            className="grid size-8 shrink-0 place-items-center rounded-lg bg-app-accent text-app-accent-fg transition-colors hover:bg-app-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-app-ring/60 disabled:opacity-40"
           >
-            ↑
+            <ArrowUp className="size-4" aria-hidden />
           </button>
         </div>
-        <p className="mt-1.5 px-1 text-[11px] text-neutral-400">
+        <p className="mt-1.5 px-1 text-[11px] text-app-fg-muted">
           Enter to send · Shift+Enter for a new line. Changes apply to your live canvas.
         </p>
       </div>

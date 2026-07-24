@@ -93,7 +93,7 @@ export function Select({
         </select>
         <ChevronDown
           aria-hidden
-          className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-fg"
+          className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-app-fg-muted"
         />
       </div>
       {error ? <FieldError id={errorId}>{error}</FieldError> : null}

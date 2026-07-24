@@ -46,10 +46,10 @@ export function Stepper({
       {/* ── Mobile: counter + determinate bar ─────────────────────────── */}
       <div className="md:hidden">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="font-heading text-base font-bold tracking-tight text-fg-strong">
+          <p className="font-heading text-base font-bold tracking-tight text-app-fg">
             {active?.title}
           </p>
-          <p className="font-body text-xs font-semibold tracking-wide text-muted-fg tabular-nums">
+          <p className="font-body text-xs font-semibold tracking-wide text-app-fg-muted tabular-nums">
             Step {current + 1} of {total}
           </p>
         </div>
@@ -59,15 +59,15 @@ export function Stepper({
           aria-valuemax={total}
           aria-valuenow={current + 1}
           aria-valuetext={`Step ${current + 1} of ${total}: ${active?.title ?? ""}`}
-          className="mt-2 h-1.5 w-full overflow-hidden rounded-pill bg-muted"
+          className="mt-2 h-1.5 w-full overflow-hidden rounded-pill bg-app-surface-2"
         >
           <div
-            className="h-full rounded-pill bg-primary transition-[width] duration-[var(--dur-base)] ease-[var(--ease-out-soft)]"
+            className="h-full rounded-pill bg-app-accent transition-[width] duration-[var(--dur-base)] ease-[var(--ease-out-soft)]"
             style={{ width: `${Math.max(percent, 4)}%` }}
           />
         </div>
         {active?.description ? (
-          <p className="mt-2 font-body text-xs text-muted-fg">{active.description}</p>
+          <p className="mt-2 font-body text-xs text-app-fg-muted">{active.description}</p>
         ) : null}
       </div>
 
@@ -94,7 +94,7 @@ export function Stepper({
                   aria-hidden
                   className={cn(
                     "h-0.5 min-w-4 flex-1 rounded-pill transition-colors duration-[var(--dur-base)]",
-                    index < current ? "bg-primary" : "bg-border",
+                    index < current ? "bg-app-accent" : "bg-app-border",
                   )}
                 />
               ) : null}
@@ -133,9 +133,9 @@ function StepButton({
           "flex size-7 shrink-0 items-center justify-center rounded-full",
           "font-heading text-xs font-bold tabular-nums",
           "transition-colors duration-[var(--dur-fast)]",
-          isCurrent && "bg-primary text-on-primary ring-4 ring-ring/30",
-          isComplete && "bg-primary text-on-primary",
-          !isCurrent && !isComplete && "bg-muted text-muted-fg",
+          isCurrent && "bg-app-accent text-app-accent-fg ring-4 ring-app-ring/30",
+          isComplete && "bg-app-accent text-app-accent-fg",
+          !isCurrent && !isComplete && "bg-app-surface-2 text-app-fg-muted",
         )}
       >
         {isComplete ? <Check className="size-3.5" /> : index + 1}
@@ -143,7 +143,7 @@ function StepButton({
       <span
         className={cn(
           "font-body text-sm font-semibold tracking-tight whitespace-nowrap",
-          isCurrent ? "text-fg-strong" : isReachable ? "text-fg" : "text-muted-fg",
+          isReachable ? "text-app-fg" : "text-app-fg-muted",
         )}
       >
         {step.title}
@@ -153,7 +153,7 @@ function StepButton({
 
   const shared = cn(
     "flex items-center gap-2 rounded-md px-2 py-1.5",
-    "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/50",
+    "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-ring/50",
   );
 
   if (!interactive) {
@@ -171,7 +171,7 @@ function StepButton({
     <button
       type="button"
       onClick={() => onStepSelect?.(index)}
-      className={cn(shared, "cursor-pointer hover:bg-muted")}
+      className={cn(shared, "cursor-pointer hover:bg-app-surface-2")}
       title={`Go back to ${step.title}`}
     >
       {content}

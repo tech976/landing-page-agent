@@ -542,3 +542,164 @@
     transform: none !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   APP CHROME — the product UI (dashboard, wizard, editor, chat)
+
+   A SEPARATE token namespace from the landing-page brand tokens above. This is the
+   deliberate firewall that lets the product UI have a light/dark mode WITHOUT ever
+   touching a generated page: landing pages consume `--color-surface`/`--color-fg`
+   (brand-themed, per-page), the product UI consumes `--color-app-*` (theme-flipped).
+   A preview page and the page inside the editor canvas therefore stay pure brand in
+   both light and dark mode — only the surrounding chrome changes.
+
+   The product has its own identity: an indigo accent, distinct from whatever saffron
+   or brand colour a customer's page happens to use.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* Light (default). oklch, hue 265 = the same cool neutral as the brand ramp. */
+  --color-app-bg: oklch(0.984 0.003 265); /* app canvas behind cards */
+  --color-app-surface: oklch(1 0 0); /* cards, panels, header, inputs */
+  --color-app-surface-2: oklch(0.968 0.004 265); /* sunken fills, hover, code */
+  --color-app-fg: oklch(0.21 0.017 265); /* primary text */
+  --color-app-fg-muted: oklch(0.505 0.019 265); /* secondary text */
+  --color-app-border: oklch(0.916 0.005 265); /* hairlines */
+  --color-app-border-strong: oklch(0.858 0.008 265); /* input borders, dividers */
+
+  --color-app-accent: oklch(0.548 0.196 274); /* product indigo */
+  --color-app-accent-hover: oklch(0.487 0.196 274);
+  --color-app-accent-fg: oklch(1 0 0);
+  --color-app-accent-soft: oklch(0.955 0.025 274); /* tinted fills, selected rows */
+
+  --color-app-ring: oklch(0.62 0.19 274);
+
+  --color-app-success: oklch(0.62 0.15 155);
+  --color-app-success-soft: oklch(0.955 0.04 155);
+  --color-app-warning: oklch(0.8 0.16 78);
+  --color-app-warning-soft: oklch(0.97 0.05 78);
+  --color-app-warning-fg: oklch(0.32 0.09 78); /* dark text on the bright amber fill */
+  --color-app-danger: oklch(0.585 0.22 27);
+  --color-app-danger-soft: oklch(0.965 0.03 27);
+}
+
+/* Dark — explicit choice, and the pre-JS system-preference fallback. The no-flash
+   script in the layout sets data-theme before paint, so the media query only covers
+   JS-disabled sessions. Values duplicated across the two selectors on purpose:
+   keeping them literal is clearer than a second indirection layer. */
+:root[data-theme="dark"] {
+  --color-app-bg: oklch(0.166 0.011 265);
+  --color-app-surface: oklch(0.206 0.013 265);
+  --color-app-surface-2: oklch(0.252 0.015 265);
+  --color-app-fg: oklch(0.965 0.003 265);
+  --color-app-fg-muted: oklch(0.702 0.014 265);
+  --color-app-border: oklch(0.3 0.012 265);
+  --color-app-border-strong: oklch(0.392 0.015 265);
+
+  --color-app-accent: oklch(0.64 0.176 274);
+  --color-app-accent-hover: oklch(0.71 0.155 274);
+  --color-app-accent-fg: oklch(1 0 0);
+  --color-app-accent-soft: oklch(0.3 0.062 274);
+
+  --color-app-ring: oklch(0.66 0.17 274);
+
+  --color-app-success: oklch(0.7 0.15 155);
+  --color-app-success-soft: oklch(0.3 0.05 155);
+  --color-app-warning: oklch(0.82 0.15 78);
+  --color-app-warning-soft: oklch(0.32 0.06 78);
+  --color-app-warning-fg: oklch(0.24 0.07 78);
+  --color-app-danger: oklch(0.66 0.19 27);
+  --color-app-danger-soft: oklch(0.32 0.08 27);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --color-app-bg: oklch(0.166 0.011 265);
+    --color-app-surface: oklch(0.206 0.013 265);
+    --color-app-surface-2: oklch(0.252 0.015 265);
+    --color-app-fg: oklch(0.965 0.003 265);
+    --color-app-fg-muted: oklch(0.702 0.014 265);
+    --color-app-border: oklch(0.3 0.012 265);
+    --color-app-border-strong: oklch(0.392 0.015 265);
+    --color-app-accent: oklch(0.64 0.176 274);
+    --color-app-accent-hover: oklch(0.71 0.155 274);
+    --color-app-accent-fg: oklch(1 0 0);
+    --color-app-accent-soft: oklch(0.3 0.062 274);
+    --color-app-ring: oklch(0.66 0.17 274);
+    --color-app-success: oklch(0.7 0.15 155);
+    --color-app-success-soft: oklch(0.3 0.05 155);
+    --color-app-warning: oklch(0.82 0.15 78);
+    --color-app-warning-soft: oklch(0.32 0.06 78);
+  --color-app-warning-fg: oklch(0.24 0.07 78);
+    --color-app-danger: oklch(0.66 0.19 27);
+    --color-app-danger-soft: oklch(0.32 0.08 27);
+  }
+}
+
+@layer base {
+  /* The product shell. Applied to <body>. A short colour transition makes the
+     light/dark flip feel intentional rather than jarring — but never animate the
+     landing-page canvas, so this lives on the chrome only. */
+  .app-shell {
+    background-color: var(--color-app-bg);
+    color: var(--color-app-fg);
+  }
+  .app-shell,
+  .app-shell * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-duration: 140ms;
+    transition-timing-function: var(--ease-out-soft);
+  }
+  /* The editor canvas and any rendered page must NOT inherit the chrome transition —
+     it would tint every brand colour mid-drag. Puck's frame and our LP root opt out. */
+  .app-shell .Puck iframe,
+  .app-shell [data-lp-theme],
+  .app-shell [data-lp-personality] {
+    transition: none;
+  }
+
+  /* Cool, quiet scrollbars that match whichever mode is active. */
+  .app-shell * {
+    scrollbar-color: var(--color-app-border-strong) transparent;
+  }
+  .app-shell *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .app-shell *::-webkit-scrollbar-thumb {
+    background: var(--color-app-border-strong);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  .app-shell *::-webkit-scrollbar-thumb:hover {
+    background: var(--color-app-fg-muted);
+    background-clip: content-box;
+  }
+}
+
+/* ── Puck editor dark theming ──────────────────────────────────────────────────
+   Puck exposes its chrome colours as `--puck-color-*`. Remap them under dark so the
+   editor's panels/drawer match the product, while the CANVAS (a brand page) stays as
+   authored. Puck greys run 01 (darkest) → 12 (lightest) in light mode; we invert.  */
+:root[data-theme="dark"] .Puck,
+:root:not([data-theme="light"]) .Puck {
+  --puck-color-white: var(--color-app-surface);
+  --puck-color-grey-01: oklch(0.965 0.003 265);
+  --puck-color-grey-02: oklch(0.9 0.006 265);
+  --puck-color-grey-03: oklch(0.8 0.01 265);
+  --puck-color-grey-04: var(--color-app-fg-muted);
+  --puck-color-grey-05: var(--color-app-fg-muted);
+  --puck-color-grey-06: oklch(0.44 0.014 265);
+  --puck-color-grey-07: var(--color-app-border-strong);
+  --puck-color-grey-08: var(--color-app-border);
+  --puck-color-grey-09: var(--color-app-surface-2);
+  --puck-color-grey-10: var(--color-app-surface-2);
+  --puck-color-grey-11: var(--color-app-surface);
+  --puck-color-grey-12: var(--color-app-bg);
+  --puck-color-azure-03: var(--color-app-accent);
+  --puck-color-azure-04: var(--color-app-accent);
+  --puck-color-azure-05: var(--color-app-accent);
+  --puck-color-azure-06: var(--color-app-accent-hover);
+  color-scheme: dark;
+}

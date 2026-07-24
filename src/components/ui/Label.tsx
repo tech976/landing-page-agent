@@ -25,7 +25,7 @@ export function Label({
     <label
       className={cn(
         "flex items-baseline justify-between gap-3",
-        "font-body text-sm font-semibold tracking-tight text-fg-strong",
+        "font-body text-sm font-semibold tracking-tight text-app-fg",
         className,
       )}
       {...props}
@@ -34,7 +34,7 @@ export function Label({
         {children}
         {required ? (
           <>
-            <span aria-hidden className="ml-0.5 text-danger">
+            <span aria-hidden className="ml-0.5 text-app-danger">
               *
             </span>
             <span className="sr-only"> (required)</span>
@@ -42,7 +42,7 @@ export function Label({
         ) : null}
       </span>
       {aside ? (
-        <span className="font-body text-xs font-normal text-muted-fg">{aside}</span>
+        <span className="font-body text-xs font-normal text-app-fg-muted">{aside}</span>
       ) : null}
     </label>
   );
@@ -55,7 +55,7 @@ export function FieldHint({
   ...props
 }: React.ComponentPropsWithRef<"p">) {
   return (
-    <p className={cn("font-body text-xs text-muted-fg", className)} {...props}>
+    <p className={cn("font-body text-xs text-app-fg-muted", className)} {...props}>
       {children}
     </p>
   );
@@ -71,7 +71,7 @@ export function FieldError({
   return (
     <p
       role="alert"
-      className={cn("font-body text-xs font-medium text-danger-fg", className)}
+      className={cn("font-body text-xs font-medium text-app-danger", className)}
       {...props}
     >
       {children}

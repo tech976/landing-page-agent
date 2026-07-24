@@ -63,7 +63,7 @@ export function Textarea({
           required={requiredMark}
           aside={
             showCounter ? (
-              <span className={cn("tabular-nums", overLimit && "text-danger-fg")}>
+              <span className={cn("tabular-nums", overLimit && "text-app-danger")}>
                 {used}/{maxLength}
               </span>
             ) : (

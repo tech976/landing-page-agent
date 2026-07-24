@@ -108,7 +108,14 @@ export default function PageRenderer({ page, className }: PageRendererProps) {
   return (
     <div
       {...themeRootAttributes(theme, page.id)}
-      className={className}
+      // Re-ground the landing page in BRAND tokens. The app shell's <body> carries the
+      // product-UI tokens (`bg-app-bg`/`text-app-fg`) which flip with the light/dark
+      // toggle; without an explicit brand baseline here, an un-coloured element inside
+      // the page would inherit those and the whole page would dark-flip when the marketer
+      // toggles the app theme. `bg-surface`/`text-fg` are brand tokens (never flipped), so
+      // a preview looks identical in both app themes — which is the point: preview IS
+      // production. `min-h-dvh` makes the brand surface cover the app background fully.
+      className={`min-h-dvh bg-surface text-fg ${className ?? ""}`.trimEnd()}
       style={{
         ...themeToCssVars(theme),
         // The sticky bar is fixed to the bottom of the viewport; without matching body

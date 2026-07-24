@@ -11,9 +11,9 @@ import { cn } from "@/lib/utils";
 export type CardVariant = "raised" | "flat" | "outline";
 
 const CARD_VARIANTS: Record<CardVariant, string> = {
-  raised: "bg-surface-raised border border-border shadow-card",
-  flat: "bg-surface-sunken border border-border",
-  outline: "bg-surface border border-border",
+  raised: "bg-app-surface border border-app-border shadow-card",
+  flat: "bg-app-surface-2 border border-app-border",
+  outline: "bg-app-surface border border-app-border",
 };
 
 export interface CardProps extends React.ComponentPropsWithRef<"div"> {
@@ -55,7 +55,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-6 sm:py-4",
+        "flex items-start justify-between gap-3 border-b border-app-border px-4 py-3 sm:px-6 sm:py-4",
         className,
       )}
       {...props}
@@ -72,7 +72,7 @@ export function CardTitle({
 }: React.ComponentPropsWithRef<"h3">) {
   return (
     <h3
-      className={cn("font-heading text-xl font-bold tracking-tight text-fg-strong", className)}
+      className={cn("font-heading text-xl font-bold tracking-tight text-app-fg", className)}
       {...props}
     >
       {children}
@@ -86,7 +86,7 @@ export function CardDescription({
   ...props
 }: React.ComponentPropsWithRef<"p">) {
   return (
-    <p className={cn("font-body text-sm leading-normal text-muted-fg", className)} {...props}>
+    <p className={cn("font-body text-sm leading-normal text-app-fg-muted", className)} {...props}>
       {children}
     </p>
   );
@@ -112,7 +112,7 @@ export function CardFooter({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-2 border-t border-border px-4 py-3 sm:px-6",
+        "flex flex-wrap items-center gap-2 border-t border-app-border px-4 py-3 sm:px-6",
         className,
       )}
       {...props}

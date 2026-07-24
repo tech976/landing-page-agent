@@ -10,10 +10,12 @@ import {
   Check,
   Loader2,
   Plus,
+  RotateCcw,
   Sparkles,
   Trash2,
   TriangleAlert,
   Wand2,
+  X,
 } from "lucide-react";
 
 import {
@@ -37,6 +39,7 @@ import { FieldError, FieldHint, Label } from "@/components/ui/Label";
 import { Select } from "@/components/ui/Select";
 import { Stepper, type StepDefinition } from "@/components/ui/Stepper";
 import { Textarea } from "@/components/ui/Textarea";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 /**
  * Landing Agent — the intake brief.
@@ -796,6 +799,14 @@ export default function NewBriefPage() {
     [brief],
   );
 
+  // Read-only mirror of the SAME per-step schema, used purely to gate the Next
+  // button. It never writes `errors` — it only reflects whether the current step
+  // would pass, so the primary CTA can disable until the step is complete.
+  const currentStepValid = useMemo(
+    () => SECTION_SCHEMAS[step.id].safeParse(brief[step.id]).success,
+    [brief, step.id],
+  );
+
   const goTo = useCallback((index: number) => {
     setErrors({});
     setStepIndex(index);
@@ -903,17 +914,60 @@ export default function NewBriefPage() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-20 border-b border-border bg-surface/95 backdrop-blur-md">
-        <div className="mx-auto flex w-full max-w-[var(--container-page)] flex-wrap items-center gap-3 px-[var(--space-gutter)] py-3">
+      {/* ── Top bar: wordmark · context · theme · exit ─────────────────── */}
+      <header className="sticky top-0 z-30 border-b border-app-border bg-app-surface/85 backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-[var(--container-narrow)] items-center gap-3 px-[var(--space-gutter)] py-2.5">
           <Link
             href="/"
-            className={buttonStyles({ variant: "ghost", size: "sm", className: "-ml-2" })}
+            className="group -ml-1 flex items-center gap-2.5 rounded-lg px-1 py-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-ring/40"
           >
-            <ArrowLeft className="size-4" />
-            Dashboard
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-app-accent text-app-accent-fg shadow-sm">
+              <Sparkles className="size-4" aria-hidden />
+            </span>
+            <span className="font-heading text-base font-extrabold tracking-tight text-app-fg">
+              Landing Agent
+            </span>
           </Link>
-          <span className="ml-auto flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={handleReset}>
+          <span aria-hidden className="hidden h-5 w-px bg-app-border sm:block" />
+          <span className="hidden font-body text-sm text-app-fg-muted sm:block">
+            New landing page
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
+            <Link
+              href="/"
+              className={buttonStyles({ variant: "ghost", size: "sm" })}
+              aria-label="Exit to dashboard"
+            >
+              <X className="size-4" aria-hidden />
+              <span className="hidden sm:inline">Exit</span>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Step area ──────────────────────────────────────────────────── */}
+      <main className="mx-auto w-full max-w-[var(--container-narrow)] flex-1 px-[var(--space-gutter)] pt-6 pb-12 sm:pt-10 sm:pb-16">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-1.5">
+            <p className="font-body text-xs font-semibold tracking-widest text-app-accent uppercase">
+              Campaign brief
+            </p>
+            <h1 className="font-heading text-3xl font-extrabold tracking-tight text-app-fg sm:text-4xl">
+              Tell us about the offer
+            </h1>
+            <p className="max-w-prose font-body text-sm text-app-fg-muted">
+              Seven quick steps. Everything you enter is saved as you type, and stays
+              fully editable once the page is generated.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              icon={<RotateCcw className="size-4" />}
+            >
               Clear
             </Button>
             <Button
@@ -924,50 +978,38 @@ export default function NewBriefPage() {
             >
               Fill with sample data
             </Button>
-          </span>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-[var(--container-page)] flex-1 px-[var(--space-gutter)] py-6 sm:py-10">
-        <div className="flex flex-col gap-1">
-          <p className="font-body text-xs font-semibold tracking-widest text-primary uppercase">
-            New landing page
-          </p>
-          <h1 className="font-heading text-3xl font-extrabold tracking-tight text-fg-strong sm:text-4xl">
-            Campaign brief
-          </h1>
+          </div>
         </div>
 
-        <Stepper
-          steps={STEPS}
-          current={stepIndex}
-          furthest={furthest}
-          onStepSelect={goTo}
-          className="mt-6 sm:mt-8"
-        />
+        <div className="mt-6 rounded-xl border border-app-border bg-app-surface p-4 shadow-xs sm:mt-8 sm:px-5">
+          <Stepper steps={STEPS} current={stepIndex} furthest={furthest} onStepSelect={goTo} />
+        </div>
 
         {status === "failed" && failure ? (
           <div
             role="alert"
-            className="mt-6 flex items-start gap-3 rounded-lg border border-danger bg-danger-soft p-4"
+            className="mt-6 flex items-start gap-3 rounded-lg border border-app-danger bg-app-danger-soft p-4"
           >
-            <TriangleAlert className="mt-0.5 size-5 shrink-0 text-danger-fg" aria-hidden />
+            <TriangleAlert className="mt-0.5 size-5 shrink-0 text-app-danger" aria-hidden />
             <div>
-              <p className="font-body text-sm font-semibold text-danger-fg">
+              <p className="font-body text-sm font-semibold text-app-fg">
                 Could not generate the page
               </p>
-              <p className="mt-0.5 font-body text-sm text-danger-fg">{failure}</p>
+              <p className="mt-0.5 font-body text-sm text-app-fg-muted">{failure}</p>
             </div>
           </div>
         ) : null}
 
         <Card className="mt-6">
-          <CardBody className="gap-6 sm:gap-7">
-            <div className="hidden flex-col gap-1 md:flex">
-              <h2 className="font-heading text-2xl font-extrabold tracking-tight text-fg-strong">
+          <CardBody className="gap-6 p-5 sm:gap-7 sm:p-8">
+            <div className="hidden flex-col gap-1.5 border-b border-app-border pb-5 md:flex">
+              <span className="font-body text-xs font-semibold tracking-widest text-app-fg-muted uppercase tabular-nums">
+                Step {stepIndex + 1} of {STEPS.length}
+              </span>
+              <h2 className="font-heading text-2xl font-extrabold tracking-tight text-app-fg">
                 {step.title}
               </h2>
-              <p className="font-body text-sm text-muted-fg">{step.description}</p>
+              <p className="font-body text-sm text-app-fg-muted">{step.description}</p>
             </div>
 
             {step.id === "brand" ? (
@@ -1004,13 +1046,18 @@ export default function NewBriefPage() {
             ) : null}
           </CardBody>
         </Card>
+      </main>
 
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* ── Sticky action bar ──────────────────────────────────────────── */}
+      <footer className="sticky bottom-0 z-20 border-t border-app-border bg-app-surface/90 shadow-[var(--shadow-sticky)] backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-[var(--container-narrow)] flex-col-reverse gap-2.5 px-[var(--space-gutter)] py-3 sm:flex-row sm:items-center sm:justify-between">
           <Button
             variant="secondary"
             onClick={handleBack}
             disabled={stepIndex === 0}
             icon={<ArrowLeft className="size-4" />}
+            fullWidth
+            className="sm:w-auto"
           >
             Back
           </Button>
@@ -1026,13 +1073,18 @@ export default function NewBriefPage() {
               Generate landing page
             </Button>
           ) : (
-            <Button onClick={handleNext} fullWidth className="sm:w-auto">
+            <Button
+              onClick={handleNext}
+              disabled={!currentStepValid}
+              fullWidth
+              className="sm:w-auto"
+            >
               Next: {STEPS[stepIndex + 1].title}
               <ArrowRight className="size-4" />
             </Button>
           )}
         </div>
-      </main>
+      </footer>
     </div>
   );
 }
@@ -1061,10 +1113,10 @@ function Fieldset({
   children: React.ReactNode;
 }) {
   return (
-    <fieldset className="flex flex-col gap-4 border-t border-border pt-5">
+    <fieldset className="flex flex-col gap-4 border-t border-app-border pt-5">
       <legend className="sr-only">{legend}</legend>
       <div className="flex flex-col gap-0.5">
-        <p className="font-heading text-base font-bold tracking-tight text-fg-strong">
+        <p className="font-heading text-base font-bold tracking-tight text-app-fg">
           {legend}
         </p>
         {hint ? <FieldHint>{hint}</FieldHint> : null}
@@ -1097,7 +1149,7 @@ function Repeater({
   return (
     <div className="flex flex-col gap-3">
       {items.length === 0 ? (
-        <p className="rounded-md border border-dashed border-border bg-surface-sunken px-4 py-5 text-center font-body text-sm text-muted-fg">
+        <p className="rounded-md border border-dashed border-app-border bg-app-surface-2 px-4 py-5 text-center font-body text-sm text-app-fg-muted">
           {emptyLabel}
         </p>
       ) : null}
@@ -1105,9 +1157,9 @@ function Repeater({
       {items.map((_, index) => (
         <div
           key={index}
-          className="relative rounded-lg border border-border bg-surface-sunken p-4 pr-14"
+          className="relative rounded-lg border border-app-border bg-app-surface-2 p-4 pr-14"
         >
-          <p className="mb-3 font-body text-xs font-semibold tracking-wide text-muted-fg uppercase">
+          <p className="mb-3 font-body text-xs font-semibold tracking-wide text-app-fg-muted uppercase">
             {itemLabel(index)}
           </p>
           <Button
@@ -1116,7 +1168,7 @@ function Repeater({
             onClick={() => onRemove(index)}
             aria-label={`Remove ${itemLabel(index)}`}
             title="Remove"
-            className="absolute top-3 right-3 size-11 p-0 text-danger-fg"
+            className="absolute top-3 right-3 size-11 p-0 text-app-danger"
           >
             <Trash2 className="size-4" />
           </Button>
@@ -1167,11 +1219,11 @@ function Checkbox({
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="mt-0.5 size-5 shrink-0 cursor-pointer accent-primary"
+        className="mt-0.5 size-5 shrink-0 cursor-pointer accent-app-accent"
       />
       <span className="flex flex-col gap-0.5">
-        <span className="font-body text-sm font-semibold text-fg-strong">{label}</span>
-        {hint ? <span className="font-body text-xs text-muted-fg">{hint}</span> : null}
+        <span className="font-body text-sm font-semibold text-app-fg">{label}</span>
+        {hint ? <span className="font-body text-xs text-app-fg-muted">{hint}</span> : null}
       </span>
     </label>
   );
@@ -1203,7 +1255,7 @@ function ColorField({
           value={/^#[0-9a-fA-F]{6}$/.test(value) ? value : "#000000"}
           onChange={(event) => onChange(event.target.value)}
           aria-label={`${label} colour picker`}
-          className="size-11 shrink-0 cursor-pointer rounded-md border border-border bg-surface p-1"
+          className="size-11 shrink-0 cursor-pointer rounded-md border border-app-border bg-app-surface p-1"
         />
         <Input
           value={value}
@@ -2210,21 +2262,21 @@ function CampaignStep({
                 className={cn(
                   "flex flex-col gap-1 rounded-lg border-2 p-4 text-left",
                   "transition-[border-color,background-color] duration-[var(--dur-fast)]",
-                  "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/50",
+                  "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-ring/50",
                   selected
-                    ? "border-primary bg-primary-soft"
-                    : "border-border bg-surface hover:border-border-strong",
+                    ? "border-app-accent bg-app-accent-soft"
+                    : "border-app-border bg-app-surface hover:border-app-border-strong",
                 )}
               >
                 <span className="flex items-center gap-2">
-                  <span className="font-heading text-base font-bold tracking-tight text-fg-strong">
+                  <span className="font-heading text-base font-bold tracking-tight text-app-fg">
                     {DESTINATION_COPY[kind].title}
                   </span>
                   {selected ? (
-                    <Check className="size-4 text-primary" aria-hidden />
+                    <Check className="size-4 text-app-accent" aria-hidden />
                   ) : null}
                 </span>
-                <span className="font-body text-xs text-muted-fg">
+                <span className="font-body text-xs text-app-fg-muted">
                   {DESTINATION_COPY[kind].description}
                 </span>
               </button>
@@ -2415,12 +2467,12 @@ function CampaignStep({
             <div className="flex flex-col gap-2">
               <Label>Fields</Label>
               {destination.form.fields.length > 4 ? (
-                <div className="flex items-start gap-2 rounded-md border border-warning bg-warning-soft p-3">
+                <div className="flex items-start gap-2 rounded-md border border-app-warning bg-app-warning-soft p-3">
                   <TriangleAlert
-                    className="mt-0.5 size-4 shrink-0 text-warning-fg"
+                    className="mt-0.5 size-4 shrink-0 text-app-warning-fg"
                     aria-hidden
                   />
-                  <p className="font-body text-xs text-warning-fg">
+                  <p className="font-body text-xs text-app-warning-fg">
                     Above four fields, mobile lead rate collapses. Cut everything you can
                     ask for on the call instead.
                   </p>
@@ -2690,16 +2742,16 @@ function StyleStep({ value, onChange, errors }: StepProps<Draft["style"]>) {
               onClick={() => onChange({ personality })}
               className={cn(
                 "flex flex-col gap-3 rounded-xl border-2 p-3 text-left",
-                "transition-[border-color,box-shadow] duration-[var(--dur-fast)]",
-                "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/50",
+                "transition-[border-color,box-shadow,background-color] duration-[var(--dur-fast)]",
+                "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-ring/50",
                 selected
-                  ? "border-primary shadow-card"
-                  : "border-border hover:border-border-strong",
+                  ? "border-app-accent bg-app-accent-soft shadow-card"
+                  : "border-app-border hover:border-app-border-strong",
               )}
             >
               <PersonalityPreview personality={personality} />
               <span className="flex items-center justify-between gap-2">
-                <span className="font-heading text-base font-bold tracking-tight text-fg-strong">
+                <span className="font-heading text-base font-bold tracking-tight text-app-fg">
                   {copy.title}
                 </span>
                 {selected ? (
@@ -2709,8 +2761,8 @@ function StyleStep({ value, onChange, errors }: StepProps<Draft["style"]>) {
                   </Badge>
                 ) : null}
               </span>
-              <span className="font-body text-xs text-muted-fg">{copy.blurb}</span>
-              <span className="font-body text-xs text-muted-fg">
+              <span className="font-body text-xs text-app-fg-muted">{copy.blurb}</span>
+              <span className="font-body text-xs text-app-fg-muted">
                 <span className="font-semibold">Best for:</span> {copy.bestFor}
               </span>
             </button>
@@ -2745,16 +2797,16 @@ function GenerationProgress({ stage, brandName }: { stage: number; brandName: st
       <div className="flex w-full max-w-prose flex-col items-center gap-6 text-center">
         <span
           aria-hidden
-          className="flex size-16 items-center justify-center rounded-2xl bg-primary-soft text-primary"
+          className="flex size-16 items-center justify-center rounded-2xl bg-app-accent-soft text-app-accent"
         >
           <Loader2 className="size-8 motion-safe:animate-spin" />
         </span>
 
         <div className="flex flex-col gap-2">
-          <h1 className="font-heading text-3xl font-extrabold tracking-tight text-fg-strong">
+          <h1 className="font-heading text-3xl font-extrabold tracking-tight text-app-fg">
             Building your page
           </h1>
-          <p className="font-body text-base text-muted-fg">
+          <p className="font-body text-base text-app-fg-muted">
             {brandName
               ? `Composing a landing page for ${brandName} from the block registry.`
               : "Composing a landing page from the block registry."}
@@ -2763,7 +2815,7 @@ function GenerationProgress({ stage, brandName }: { stage: number; brandName: st
 
         <ol
           aria-live="polite"
-          className="flex w-full flex-col gap-2 rounded-xl border border-border bg-surface-sunken p-4 text-left"
+          className="flex w-full flex-col gap-2 rounded-xl border border-app-border bg-app-surface-2 p-4 text-left"
         >
           {GENERATION_STAGES.map((label, index) => {
             const done = index < stage;
@@ -2774,9 +2826,9 @@ function GenerationProgress({ stage, brandName }: { stage: number; brandName: st
                   aria-hidden
                   className={cn(
                     "flex size-6 shrink-0 items-center justify-center rounded-full",
-                    done && "bg-primary text-on-primary",
-                    active && "bg-primary-soft text-primary",
-                    !done && !active && "bg-muted text-muted-fg",
+                    done && "bg-app-accent text-app-accent-fg",
+                    active && "bg-app-accent-soft text-app-accent",
+                    !done && !active && "bg-app-surface text-app-fg-muted",
                   )}
                 >
                   {done ? (
@@ -2790,7 +2842,7 @@ function GenerationProgress({ stage, brandName }: { stage: number; brandName: st
                 <span
                   className={cn(
                     "font-body text-sm",
-                    active || done ? "text-fg-strong" : "text-muted-fg",
+                    active || done ? "text-app-fg" : "text-app-fg-muted",
                   )}
                 >
                   {label}
@@ -2800,7 +2852,7 @@ function GenerationProgress({ stage, brandName }: { stage: number; brandName: st
           })}
         </ol>
 
-        <p className="font-body text-xs text-muted-fg">
+        <p className="font-body text-xs text-app-fg-muted">
           This usually takes 20–40 seconds. Leaving this page cancels the run.
         </p>
       </div>

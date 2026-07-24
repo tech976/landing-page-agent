@@ -5,22 +5,14 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import {
-  Copy,
-  ExternalLink,
-  FileWarning,
-  LayoutTemplate,
-  Pencil,
-  Plus,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
+import { Copy, ExternalLink, FileWarning, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { PageSchema, StylePersonalitySchema } from "@/lib/schema/page";
 import { cn, slugify } from "@/lib/utils";
 import { Badge, type BadgeTone } from "@/components/ui/Badge";
-import { Button, buttonStyles } from "@/components/ui/Button";
+import { Button, IconButton, buttonStyles } from "@/components/ui/Button";
 import { Card, CardBody, CardFooter } from "@/components/ui/Card";
+import { AppTopBar } from "@/components/app/AppTopBar";
 
 /**
  * Landing Agent — dashboard.
@@ -190,14 +182,16 @@ const STATUS_LABEL: Record<PageSummary["status"], string> = {
 };
 
 /**
- * Thumbnail stand-in until real page screenshots exist. Keyed off the style
- * personality so a marketer can recognise a page by shape at a glance. Static
- * lookup, token classes only — DESIGN-SYSTEM §2.4a.
+ * Thumbnail wash keyed off the style personality, so a marketer can recognise a
+ * page family by its tint. App-chrome tokens only (the product indigo is the sole
+ * accent), so each gradient stays legible in light AND dark — the variety comes
+ * from direction and stops, never from a brand hue. Static lookup so Tailwind's
+ * scanner sees every literal class.
  */
-const PERSONALITY_THUMB: Record<string, string> = {
-  "bold-commerce": "bg-primary-soft text-primary",
-  "premium-minimal": "bg-surface-sunken text-fg-strong",
-  "vibrant-youth": "bg-accent-soft text-accent",
+const PERSONALITY_GRADIENT: Record<string, string> = {
+  "bold-commerce": "bg-gradient-to-br from-app-accent-soft via-app-surface to-app-surface-2",
+  "premium-minimal": "bg-gradient-to-br from-app-surface-2 via-app-surface to-app-surface-2",
+  "vibrant-youth": "bg-gradient-to-tr from-app-accent-soft via-app-surface-2 to-app-accent-soft",
 };
 
 const PERSONALITY_LABEL: Record<string, string> = {
@@ -240,59 +234,32 @@ export default async function DashboardPage() {
   const drafts = pages.filter((page) => page.status === "draft").length;
 
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex w-full max-w-[var(--container-page)] flex-wrap items-center gap-4 px-[var(--space-gutter)] py-4">
-          <div className="flex items-center gap-2.5">
-            <span
-              aria-hidden
-              className="flex size-9 items-center justify-center rounded-lg bg-primary text-on-primary"
-            >
-              <Sparkles className="size-5" />
-            </span>
-            <span className="font-heading text-lg font-extrabold tracking-tight text-fg-strong">
-              Landing Agent
-            </span>
-          </div>
-          <span className="ml-auto" />
-          <Link href="/new" className={buttonStyles({ size: "sm" })}>
-            <Plus className="size-4" />
-            New Landing Page
-          </Link>
-        </div>
-      </header>
+    <div className="flex min-h-full flex-col bg-app-bg">
+      <AppTopBar />
 
       <main className="mx-auto w-full max-w-[var(--container-page)] flex-1 px-[var(--space-gutter)] py-8 sm:py-12">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        {/* Page heading + at-a-glance counts. */}
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="font-heading text-3xl font-extrabold tracking-tight text-fg-strong sm:text-4xl">
+            <h1 className="font-heading text-3xl font-extrabold tracking-tight text-app-fg sm:text-4xl">
               Landing pages
             </h1>
-            <p className="mt-2 font-body text-base text-muted-fg">
-              {pages.length === 0
-                ? "No pages yet — start with a brief."
-                : `${pages.length} page${pages.length === 1 ? "" : "s"} · ${published} published · ${drafts} draft${drafts === 1 ? "" : "s"}`}
+            <p className="mt-2 max-w-prose font-body text-base text-app-fg-muted">
+              Every page your team has generated — ready to edit, preview, duplicate for
+              a new campaign, or ship.
             </p>
           </div>
+
+          {pages.length > 0 ? (
+            <div className="flex shrink-0 items-center gap-2.5">
+              <Stat value={pages.length} label={pages.length === 1 ? "page" : "pages"} />
+              <Stat value={published} label="published" dot="bg-app-success" />
+              <Stat value={drafts} label={drafts === 1 ? "draft" : "drafts"} dot="bg-app-border-strong" />
+            </div>
+          ) : null}
         </div>
 
-        {broken.length > 0 ? (
-          <div className="mt-6 flex items-start gap-3 rounded-lg border border-warning bg-warning-soft p-4">
-            <FileWarning className="mt-0.5 size-5 shrink-0 text-warning-fg" aria-hidden />
-            <div>
-              <p className="font-body text-sm font-semibold text-warning-fg">
-                {broken.length} file{broken.length === 1 ? "" : "s"} could not be read
-              </p>
-              <ul className="mt-1 flex flex-col gap-0.5">
-                {broken.map((entry) => (
-                  <li key={entry.file} className="font-body text-xs text-warning-fg">
-                    <span className="font-mono">{entry.file}</span> — {entry.reason}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        ) : null}
+        {broken.length > 0 ? <BrokenNotice broken={broken} /> : null}
 
         {pages.length === 0 ? (
           <EmptyState />
@@ -310,30 +277,89 @@ export default async function DashboardPage() {
   );
 }
 
+/** Compact metric chip for the header summary. */
+function Stat({ value, label, dot }: { value: number; label: string; dot?: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-app-border bg-app-surface px-3.5 py-2 shadow-xs">
+      {dot ? <span aria-hidden className={cn("size-2 rounded-full", dot)} /> : null}
+      <span className="font-heading text-lg font-extrabold tabular-nums tracking-tight text-app-fg">
+        {value}
+      </span>
+      <span className="font-body text-xs font-medium text-app-fg-muted">{label}</span>
+    </div>
+  );
+}
+
+/**
+ * The repairable-file warning. Preserves the exact data the store surfaces
+ * (filename + parser reason) and styles it as a warning card — never a dead end.
+ */
+function BrokenNotice({ broken }: { broken: BrokenPage[] }) {
+  return (
+    <div className="mt-6 flex items-start gap-3.5 rounded-xl border border-app-border-strong bg-app-warning-soft p-4 shadow-xs sm:p-5">
+      <span
+        aria-hidden
+        className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-app-warning text-app-warning-fg"
+      >
+        <FileWarning className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="font-heading text-sm font-bold tracking-tight text-app-fg">
+          {broken.length} file{broken.length === 1 ? "" : "s"} need attention
+        </p>
+        <p className="mt-0.5 font-body text-xs text-app-fg-muted">
+          These couldn&apos;t be read as a valid page and were skipped — fix the JSON to
+          bring them back.
+        </p>
+        <ul className="mt-3 flex flex-col gap-1.5">
+          {broken.map((entry) => (
+            <li
+              key={entry.file}
+              className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-app-border bg-app-surface px-3 py-2"
+            >
+              <span className="font-mono text-xs font-semibold text-app-fg">{entry.file}</span>
+              <span className="font-body text-xs text-app-fg-muted">{entry.reason}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 function EmptyState() {
   return (
-    <Card variant="flat" className="mt-8 border-dashed">
-      <CardBody className="items-center gap-4 py-14 text-center sm:py-20">
-        <span
-          aria-hidden
-          className="flex size-14 items-center justify-center rounded-2xl bg-primary-soft text-primary"
-        >
-          <LayoutTemplate className="size-7" />
-        </span>
-        <h2 className="font-heading text-2xl font-extrabold tracking-tight text-fg-strong">
+    <Card variant="flat" className="mt-8 border-dashed border-app-border-strong">
+      <CardBody className="items-center gap-5 px-6 py-16 text-center sm:py-24">
+        {/* Illustration — a little stack of "pages" with an accent + affordance. */}
+        <div aria-hidden className="relative mb-2 grid h-32 w-56 place-items-center">
+          <span className="absolute left-5 top-4 h-24 w-32 -rotate-[9deg] rounded-2xl border border-app-border bg-app-surface shadow-sm" />
+          <span className="absolute right-5 top-4 h-24 w-32 rotate-[9deg] rounded-2xl border border-app-border bg-app-surface shadow-sm" />
+          <span className="relative flex h-28 w-36 flex-col gap-2 rounded-2xl border border-app-border bg-app-surface p-3.5 shadow-card">
+            <span className="h-2 w-10 rounded-full bg-app-accent-soft" />
+            <span className="h-2.5 w-full rounded-full bg-app-border-strong" />
+            <span className="h-2 w-2/3 rounded-full bg-app-border-strong" />
+            <span className="mt-auto h-6 w-16 rounded-md bg-app-accent" />
+          </span>
+          <span className="absolute -top-1 right-3 flex size-10 items-center justify-center rounded-full bg-app-accent text-app-accent-fg shadow-card ring-4 ring-app-bg">
+            <Plus className="size-5" />
+          </span>
+        </div>
+
+        <h2 className="font-heading text-2xl font-extrabold tracking-tight text-app-fg">
           No landing pages yet
         </h2>
-        <p className="max-w-prose font-body text-base text-muted-fg">
-          Fill in a brief — brand, product, offer, proof, audience, campaign, style —
-          and the generator composes a validated page from the block registry. You can
-          then edit every block visually.
+        <p className="max-w-prose font-body text-base text-app-fg-muted">
+          Fill in a brief — brand, product, offer, proof, audience, campaign, style — and
+          the generator composes a validated page from the block registry. You can then
+          edit every block visually.
         </p>
         <Link href="/new" className={cn(buttonStyles({ size: "lg" }), "mt-2")}>
-          <Plus className="size-5" />
+          <Plus className="size-5" aria-hidden />
           New Landing Page
         </Link>
-        <p className="font-body text-xs text-muted-fg">
-          In a hurry? The brief has a “Fill with sample data” button.
+        <p className="font-body text-xs text-app-fg-muted">
+          In a hurry? The brief has a &ldquo;Fill with sample data&rdquo; button.
         </p>
       </CardBody>
     </Card>
@@ -342,65 +368,87 @@ function EmptyState() {
 
 function PageCard({ page }: { page: PageSummary }) {
   const personality = page.theme?.personality ?? "bold-commerce";
-  const thumbClass = PERSONALITY_THUMB[personality] ?? PERSONALITY_THUMB["bold-commerce"];
+  const gradient = PERSONALITY_GRADIENT[personality] ?? PERSONALITY_GRADIENT["bold-commerce"];
   const blockCount = page.blocks.length;
 
   return (
     <Card interactive className="flex h-full flex-col">
-      {/* Thumbnail placeholder — a real screenshot service replaces this later. */}
-      <div
-        className={cn(
-          "relative flex aspect-card items-center justify-center overflow-hidden",
-          thumbClass,
-        )}
-      >
-        <span
-          aria-hidden
-          className="font-heading text-5xl font-extrabold tracking-tighter opacity-70"
-        >
-          {page.title.slice(0, 2).toUpperCase()}
-        </span>
-        <span className="absolute top-3 left-3">
+      {/* Thumbnail placeholder — an abstract "page preview" until real screenshots
+          exist: a gradient stage with a faux browser peeking up from the bottom. */}
+      <div className={cn("relative aspect-card overflow-hidden", gradient)}>
+        <span className="absolute left-3 top-3 z-10">
           <Badge tone={STATUS_TONE[page.status]} variant="solid" dot>
             {STATUS_LABEL[page.status]}
           </Badge>
         </span>
+
+        <div className="absolute inset-x-5 top-9 -bottom-1 overflow-hidden rounded-t-xl border border-b-0 border-app-border bg-app-surface/90 shadow-sm backdrop-blur-sm">
+          <div className="flex items-center gap-2 border-b border-app-border px-3 py-2">
+            <span className="flex items-center gap-1" aria-hidden>
+              <span className="size-1.5 rounded-full bg-app-danger" />
+              <span className="size-1.5 rounded-full bg-app-warning" />
+              <span className="size-1.5 rounded-full bg-app-success" />
+            </span>
+            <span className="ml-1 min-w-0 flex-1 truncate rounded bg-app-surface-2 px-1.5 py-0.5 font-mono text-[10px] leading-none text-app-fg-muted">
+              /{page.slug}
+            </span>
+          </div>
+          <div className="flex flex-col gap-2 px-4 pt-4" aria-hidden>
+            <span className="h-1.5 w-10 rounded-full bg-app-accent-soft" />
+            <span className="h-2.5 w-4/5 rounded-full bg-app-border-strong" />
+            <span className="h-2 w-3/5 rounded-full bg-app-border-strong" />
+            <span className="mt-1.5 h-5 w-16 rounded-md bg-app-accent" />
+          </div>
+        </div>
       </div>
 
-      <CardBody className="flex-1 gap-2">
-        <h2 className="font-heading text-xl font-bold tracking-tight text-fg-strong">
+      <CardBody className="flex flex-1 flex-col gap-1.5">
+        <h2 className="font-heading text-lg font-bold tracking-tight text-app-fg">
           <Link
             href={`/editor/${page.id}`}
-            className="rounded-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/50"
+            className="rounded-sm outline-none transition-colors duration-[var(--dur-fast)] hover:text-app-accent focus-visible:ring-4 focus-visible:ring-app-ring/50"
           >
             {page.title}
           </Link>
         </h2>
-        <p className="font-mono text-xs text-muted-fg">/{page.slug}</p>
-        <p className="mt-1 font-body text-xs text-muted-fg">
-          Edited {formatRelative(page.updatedAt)} · {blockCount} block
-          {blockCount === 1 ? "" : "s"} ·{" "}
-          {PERSONALITY_LABEL[personality] ?? personality}
-        </p>
+
+        <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1.5 pt-2 font-body text-xs text-app-fg-muted">
+          <Badge tone="accent" variant="soft">
+            {PERSONALITY_LABEL[personality] ?? personality}
+          </Badge>
+          <span aria-hidden className="text-app-border-strong">
+            ·
+          </span>
+          <span>
+            {blockCount} block{blockCount === 1 ? "" : "s"}
+          </span>
+          <span aria-hidden className="text-app-border-strong">
+            ·
+          </span>
+          <span>Edited {formatRelative(page.updatedAt)}</span>
+        </div>
       </CardBody>
 
-      <CardFooter className="justify-between">
-        <div className="flex flex-wrap items-center gap-2">
+      <CardFooter className="justify-between gap-2">
+        <div className="flex items-center gap-2">
           <Link
             href={`/editor/${page.id}`}
-            className={buttonStyles({ variant: "secondary", size: "sm" })}
+            className={buttonStyles({ variant: "primary", size: "sm" })}
           >
-            <Pencil className="size-4" />
+            <Pencil className="size-4" aria-hidden />
             Edit
           </Link>
           {/* Preview resolves by id, not slug: the route is /preview/[pageId] and
               calls getPage(id), which reads <id>.json. Linking by slug 404s for
-              every page whose slug differs from its id. */}
+              every page whose slug differs from its id. Opens in a new tab so the
+              marketer keeps the dashboard open. */}
           <Link
             href={`/preview/${page.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className={buttonStyles({ variant: "ghost", size: "sm" })}
           >
-            <ExternalLink className="size-4" />
+            <ExternalLink className="size-4" aria-hidden />
             Preview
           </Link>
         </div>
@@ -408,16 +456,9 @@ function PageCard({ page }: { page: PageSummary }) {
         <div className="flex items-center gap-1">
           <form action={duplicatePage}>
             <input type="hidden" name="id" value={page.id} />
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              aria-label={`Duplicate ${page.title}`}
-              title="Duplicate"
-              className="size-11 p-0"
-            >
-              <Copy className="size-4" />
-            </Button>
+            <IconButton type="submit" label={`Duplicate ${page.title}`}>
+              <Copy className="size-4" aria-hidden />
+            </IconButton>
           </form>
 
           {/* Destructive action behind a confirmation step. `<details>` keeps this
@@ -426,17 +467,17 @@ function PageCard({ page }: { page: PageSummary }) {
             <summary
               className={cn(
                 buttonStyles({ variant: "ghost", size: "sm" }),
-                "size-11 list-none p-0 text-danger-fg [&::-webkit-details-marker]:hidden",
+                "size-11 list-none p-0 text-app-danger [&::-webkit-details-marker]:hidden",
               )}
               aria-label={`Delete ${page.title}`}
               title="Delete"
             >
-              <Trash2 className="size-4" />
+              <Trash2 className="size-4" aria-hidden />
             </summary>
-            <div className="absolute right-0 bottom-full z-40 mb-2 w-60 rounded-lg border border-border bg-surface-raised p-3 shadow-lg">
-              <p className="font-body text-sm text-fg">
-                Delete <span className="font-semibold">{page.title}</span>? This cannot
-                be undone.
+            <div className="absolute right-0 bottom-full z-40 mb-2 w-64 rounded-xl border border-app-border bg-app-surface p-3.5 shadow-lg">
+              <p className="font-body text-sm text-app-fg">
+                Delete <span className="font-semibold">{page.title}</span>? This cannot be
+                undone.
               </p>
               <form action={deletePage} className="mt-3 flex justify-end">
                 <input type="hidden" name="id" value={page.id} />
