@@ -212,8 +212,13 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
     async (data?: any) => {
       if (!page) return;
 
-      const next = data ? puckDataToPage(data, page) : currentPage();
-      if (!next) return;
+      const base = data ? puckDataToPage(data, page) : currentPage();
+      if (!base) return;
+
+      // Publishing flips the document to "published" — that's what the button means, and it
+      // makes the dashboard's draft/published counts real. Editing again reverts to "draft"
+      // on the next save only if the user changes it; here we mark it live.
+      const next: Page = { ...base, status: "published" };
 
       setSaveState({ kind: "busy", message: "Publishing…" });
 
@@ -331,6 +336,10 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
             onPublish={publish}
             headerTitle={page.title}
             headerPath={`/${page.slug}`}
+            // Our own header already carries Publish (and Preview, CRO, Ask AI). Blank out
+            // Puck's built-in header actions so there aren't two Publish buttons doing the
+            // same thing. Puck's undo/redo history controls live outside this slot and stay.
+            overrides={{ headerActions: () => <></> }}
           />
         </div>
 
