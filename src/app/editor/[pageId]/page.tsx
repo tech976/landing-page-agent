@@ -35,6 +35,9 @@ import { ExternalLink, Sparkles } from "lucide-react";
 import "@measured/puck/puck.css";
 
 import { AiChatPanel, type AiEditResult } from "@/components/editor/AiChatPanel";
+import { CroPanel } from "@/components/cro/CroPanel";
+import { CroScoreRing } from "@/components/cro/CroScoreRing";
+import { auditPage, type CroReport } from "@/lib/cro/audit";
 import { pageToPuckData, puckDataToPage } from "@/lib/puck/adapter";
 import { puckConfig } from "@/lib/puck/config";
 import type { Page } from "@/lib/schema/page";
@@ -108,8 +111,20 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
    */
   const [canvasVersion, setCanvasVersion] = useState(0);
 
-  /** Whether the AI chat panel is docked open. */
+  /**
+   * The two docked right-hand panels — AI chat and CRO score. Mutually exclusive so they
+   * never fight for the same strip of screen; opening one closes the other.
+   */
   const [chatOpen, setChatOpen] = useState(false);
+  const [croOpen, setCroOpen] = useState(false);
+  const openChat = useCallback((v: boolean) => {
+    setChatOpen(v);
+    if (v) setCroOpen(false);
+  }, []);
+  const openCro = useCallback((v: boolean) => {
+    setCroOpen(v);
+    if (v) setChatOpen(false);
+  }, []);
 
   /**
    * Latest canvas data, held in a ref rather than state: Puck's onChange fires on
@@ -162,6 +177,33 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
     if (!latestDataRef.current) return page;
     return puckDataToPage(latestDataRef.current, page);
   }, [page]);
+
+  /* ── CRO score ──────────────────────────────────────────────────────────── */
+
+  /**
+   * A live score computed from the loaded/AI-edited document — reactive, so the header pill
+   * updates on load and after every AI edit. Unpublished DRAG edits live in latestDataRef
+   * (not `page` state), so the panel's Re-check button re-audits the true canvas via
+   * `computeReport`. Wrapped defensively: an audit must never break the editor.
+   */
+  const baseReport: CroReport | null = useMemo(() => {
+    if (!page) return null;
+    try {
+      return auditPage(page);
+    } catch {
+      return null;
+    }
+  }, [page]);
+
+  const computeReport = useCallback((): CroReport | null => {
+    const live = currentPage();
+    if (!live) return null;
+    try {
+      return auditPage(live);
+    } catch {
+      return baseReport;
+    }
+  }, [currentPage, baseReport]);
 
   /* ── Publish ────────────────────────────────────────────────────────────── */
 
@@ -267,11 +309,14 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
         dirty={dirty}
         saveState={saveState}
         chatOpen={chatOpen}
-        onToggleChat={() => setChatOpen((v) => !v)}
+        onToggleChat={() => openChat(!chatOpen)}
+        croOpen={croOpen}
+        croReport={baseReport}
+        onToggleCro={() => openCro(!croOpen)}
         onPublish={() => publish()}
       />
 
-      {/* Canvas + docked chat panel share the row below the header. */}
+      {/* Canvas + docked panels (chat, CRO) share the row below the header. */}
       <div className="flex min-h-0 flex-1">
         <div className="min-h-0 flex-1">
           <Puck
@@ -291,9 +336,20 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
 
         <AiChatPanel
           open={chatOpen}
-          onClose={() => setChatOpen(false)}
+          onClose={() => openChat(false)}
           onEdit={runAiEdit}
           busy={saveState.kind === "busy"}
+        />
+
+        <CroPanel
+          open={croOpen}
+          onClose={() => openCro(false)}
+          computeReport={computeReport}
+          onFix={(instruction) => {
+            openChat(true); // show the edit land in the chat transcript
+            void runAiEdit(instruction);
+          }}
+          aiBusy={saveState.kind === "busy"}
         />
       </div>
     </div>
@@ -310,6 +366,9 @@ function EditorHeader({
   saveState,
   chatOpen,
   onToggleChat,
+  croOpen,
+  croReport,
+  onToggleCro,
   onPublish,
 }: {
   page: Page;
@@ -317,6 +376,9 @@ function EditorHeader({
   saveState: SaveState;
   chatOpen: boolean;
   onToggleChat: () => void;
+  croOpen: boolean;
+  croReport: CroReport | null;
+  onToggleCro: () => void;
   onPublish: () => void;
 }) {
   const busy = saveState.kind === "busy";
@@ -353,6 +415,28 @@ function EditorHeader({
             {saveState.message}
           </span>
         ) : null}
+
+        {/* CRO score — live conversion audit of the current page */}
+        <button
+          type="button"
+          onClick={onToggleCro}
+          aria-pressed={croOpen}
+          title="CRO score — conversion audit"
+          className={buttonStyles({
+            variant: "secondary",
+            size: "sm",
+            className: cn(
+              "gap-2 pl-2.5",
+              croOpen &&
+                "border-app-accent bg-app-accent-soft text-app-accent hover:bg-app-accent-soft hover:text-app-accent",
+            ),
+          })}
+        >
+          {croReport ? (
+            <CroScoreRing score={croReport.score} grade={croReport.grade} size="sm" />
+          ) : null}
+          CRO
+        </button>
 
         {/* Ask AI — opens the chat panel where the page is edited by prompt */}
         <button

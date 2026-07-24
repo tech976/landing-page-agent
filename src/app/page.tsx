@@ -13,6 +13,9 @@ import { Badge, type BadgeTone } from "@/components/ui/Badge";
 import { Button, IconButton, buttonStyles } from "@/components/ui/Button";
 import { Card, CardBody, CardFooter } from "@/components/ui/Card";
 import { AppTopBar } from "@/components/app/AppTopBar";
+import { CroScoreRing } from "@/components/cro/CroScoreRing";
+
+import { auditPage, type CroReport } from "@/lib/cro/audit";
 
 /**
  * Landing Agent — dashboard.
@@ -53,13 +56,20 @@ const PageSummarySchema = PageSchema.pick({
 
 type PageSummary = z.infer<typeof PageSummarySchema>;
 
+/**
+ * A card's data: the summary projection plus its CRO audit for the score badge.
+ * `cro` is null when a file satisfies the narrow summary yet fails FULL-schema
+ * validation — the card still renders, just without a score (never crashes).
+ */
+type PageCardData = PageSummary & { cro: CroReport | null };
+
 interface BrokenPage {
   file: string;
   reason: string;
 }
 
 interface StoreContents {
-  pages: PageSummary[];
+  pages: PageCardData[];
   broken: BrokenPage[];
 }
 
@@ -72,16 +82,22 @@ async function readStore(): Promise<StoreContents> {
     return { pages: [], broken: [] };
   }
 
-  const pages: PageSummary[] = [];
+  const pages: PageCardData[] = [];
   const broken: BrokenPage[] = [];
 
   await Promise.all(
     files.map(async (file) => {
       try {
         const raw = await readFile(path.join(PAGES_DIR, file), "utf8");
-        const parsed = PageSummarySchema.safeParse(JSON.parse(raw));
+        const json: unknown = JSON.parse(raw);
+        const parsed = PageSummarySchema.safeParse(json);
         if (parsed.success) {
-          pages.push(parsed.data);
+          // The badge needs the FULL Page, not the narrow summary. A file can
+          // pass the summary yet fail full-schema validation; when it does we
+          // skip the audit (cro: null) but still render the card. auditPage is a
+          // pure, synchronous function over the already-parsed JSON — no I/O.
+          const full = PageSchema.safeParse(json);
+          pages.push({ ...parsed.data, cro: full.success ? auditPage(full.data) : null });
         } else {
           broken.push({
             file,
@@ -366,10 +382,11 @@ function EmptyState() {
   );
 }
 
-function PageCard({ page }: { page: PageSummary }) {
+function PageCard({ page }: { page: PageCardData }) {
   const personality = page.theme?.personality ?? "bold-commerce";
   const gradient = PERSONALITY_GRADIENT[personality] ?? PERSONALITY_GRADIENT["bold-commerce"];
   const blockCount = page.blocks.length;
+  const cro = page.cro;
 
   return (
     <Card interactive className="flex h-full flex-col">
@@ -403,14 +420,31 @@ function PageCard({ page }: { page: PageSummary }) {
       </div>
 
       <CardBody className="flex flex-1 flex-col gap-1.5">
-        <h2 className="font-heading text-lg font-bold tracking-tight text-app-fg">
-          <Link
-            href={`/editor/${page.id}`}
-            className="rounded-sm outline-none transition-colors duration-[var(--dur-fast)] hover:text-app-accent focus-visible:ring-4 focus-visible:ring-app-ring/50"
-          >
-            {page.title}
-          </Link>
-        </h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-heading text-lg font-bold tracking-tight text-app-fg">
+            <Link
+              href={`/editor/${page.id}`}
+              className="rounded-sm outline-none transition-colors duration-[var(--dur-fast)] hover:text-app-accent focus-visible:ring-4 focus-visible:ring-app-ring/50"
+            >
+              {page.title}
+            </Link>
+          </h2>
+
+          {/* CRO score — proof at a glance that the page is conversion-optimized.
+              Uses app status tokens (via the ring), so it reads in light and dark.
+              Omitted only when the page failed full-schema validation. */}
+          {cro ? (
+            <span
+              className="flex shrink-0 flex-col items-center gap-0.5"
+              title={`CRO score ${cro.score} of 100 — ${cro.grade}`}
+            >
+              <CroScoreRing score={cro.score} grade={cro.grade} size="sm" />
+              <span className="font-heading text-[9px] font-bold uppercase tracking-[0.12em] text-app-fg-muted">
+                CRO
+              </span>
+            </span>
+          ) : null}
+        </div>
 
         <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1.5 pt-2 font-body text-xs text-app-fg-muted">
           <Badge tone="accent" variant="soft">
