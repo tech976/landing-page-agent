@@ -684,19 +684,30 @@
    authored. Puck greys run 01 (darkest) → 12 (lightest) in light mode; we invert.  */
 :root[data-theme="dark"] .Puck,
 :root:not([data-theme="light"]) .Puck {
+  /* THE fix: Puck uses `--puck-color-black` (#000) as `color:` on ~8 primary-text elements —
+     headings, labels, the component-list items. Unmapped, it stayed pure black on the dark
+     surface (invisible). Point it at the light foreground. */
+  --puck-color-black: var(--color-app-fg);
   --puck-color-white: var(--color-app-surface);
-  --puck-color-grey-01: oklch(0.965 0.003 265);
-  --puck-color-grey-02: oklch(0.9 0.006 265);
-  --puck-color-grey-03: oklch(0.8 0.01 265);
-  --puck-color-grey-04: var(--color-app-fg-muted);
-  --puck-color-grey-05: var(--color-app-fg-muted);
-  --puck-color-grey-06: oklch(0.44 0.014 265);
-  --puck-color-grey-07: var(--color-app-border-strong);
-  --puck-color-grey-08: var(--color-app-border);
-  --puck-color-grey-09: var(--color-app-surface-2);
-  --puck-color-grey-10: var(--color-app-surface-2);
-  --puck-color-grey-11: var(--color-app-surface);
-  --puck-color-grey-12: var(--color-app-bg);
+
+  /* Puck's grey scale is double-duty (same value used for text AND fills), so a perfect
+     inversion is impossible. Tuned for the DOMINANT uses: grey-03..07 are text (grey-04 and
+     grey-05 carry ~26 text uses between them) and must stay clearly legible on the dark
+     panel; grey-08..12 are borders and fills and go dark. All text greys clear WCAG AA on the
+     ~0.21L surface. */
+  --puck-color-grey-01: oklch(0.97 0.003 265); /* strongest text */
+  --puck-color-grey-02: oklch(0.93 0.005 265);
+  --puck-color-grey-03: oklch(0.87 0.008 265); /* headings / labels */
+  --puck-color-grey-04: oklch(0.82 0.012 265); /* KEY secondary text (13 uses) */
+  --puck-color-grey-05: oklch(0.75 0.014 265); /* KEY muted text (13 uses) */
+  --puck-color-grey-06: oklch(0.66 0.015 265);
+  --puck-color-grey-07: oklch(0.58 0.016 265); /* leans text (5 uses) */
+  --puck-color-grey-08: oklch(0.46 0.015 265); /* strong border / faint text */
+  --puck-color-grey-09: oklch(0.37 0.014 265); /* borders */
+  --puck-color-grey-10: oklch(0.3 0.013 265); /* subtle fill */
+  --puck-color-grey-11: var(--color-app-surface-2); /* raised fill */
+  --puck-color-grey-12: var(--color-app-bg); /* deepest fill */
+
   --puck-color-azure-03: var(--color-app-accent);
   --puck-color-azure-04: var(--color-app-accent);
   --puck-color-azure-05: var(--color-app-accent);
