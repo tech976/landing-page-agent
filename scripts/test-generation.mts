@@ -393,7 +393,9 @@ async function main(): Promise<void> {
   const editStartedAt = Date.now();
   let edited: Page;
   try {
-    edited = await editPage(page, instruction);
+    const editResult = await editPage(page, instruction);
+    edited = editResult.page;
+    console.log(`  routed to: ${editResult.model} (${editResult.complexity}${editResult.escalated ? ", escalated" : ""})`);
   } catch (error) {
     reportFailure(`editPage failed after ${Date.now() - editStartedAt} ms`, error);
     process.exit(1);

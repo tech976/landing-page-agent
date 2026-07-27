@@ -27,7 +27,13 @@ import { type Page, PageSchema } from "@/lib/schema/page";
 import { PageGenerationError } from "./errors";
 import { assignMissingIds, formatZodIssues } from "./generate";
 import { buildSystemPrompt } from "./prompt";
-import { getProvider, type LlmTurn } from "./provider";
+import { describeProvider, getProvider, type LlmTurn } from "./provider";
+import {
+  classifyEditComplexity,
+  type EditComplexity,
+  editModelLadder,
+  isEditRoutingEnabled,
+} from "./router";
 
 /* ────────────────────────────────────────────────────────────────────────────
    Prompt
@@ -286,14 +292,83 @@ export interface EditPageOptions {
  * @throws {PageGenerationError} on a missing key, an API failure, a truncated tool call, or
  *         an edited page that fails schema validation.
  */
+/** What an edit resolved to — the page plus which model tier actually did the work. */
+export interface EditResult {
+  page: Page;
+  /** The model that produced the accepted edit. */
+  model: string;
+  complexity: EditComplexity;
+  /** True if a cheaper model failed and a stronger one was used. */
+  escalated: boolean;
+}
+
+/** Recoverable failures escalate to a stronger model; a missing key or dead API will not. */
+function isRecoverable(error: unknown): boolean {
+  if (!(error instanceof PageGenerationError)) return false;
+  return error.stage === "validation-failed" || error.stage === "no-tool-call";
+}
+
+/**
+ * Routes an edit to the cheapest capable model and escalates on failure.
+ *
+ * A trivial edit ("change the name") runs on Haiku; a structural one on Opus (see router.ts).
+ * If a cheaper model's edit fails validation or the tool call, the next tier up retries — so
+ * routing saves cost without ever risking a broken edit. Routing applies to Anthropic only;
+ * on Groq (single model) or with EDIT_MODEL_ROUTING=off, the configured model is used directly.
+ */
 export async function editPage(
   page: Page,
   instruction: string,
   targetBlockId?: string,
   options: EditPageOptions = {},
+): Promise<EditResult> {
+  const classification = classifyEditComplexity(instruction);
+  const route = isEditRoutingEnabled() && describeProvider().provider === "anthropic";
+
+  // The ladder is a list of Anthropic model ids for the routed path; `undefined` means "use the
+  // provider's configured model" (Groq, or routing off) — a single, non-escalating attempt.
+  const ladder: (string | undefined)[] = route
+    ? editModelLadder(classification.complexity)
+    : [undefined];
+
+  let lastError: unknown;
+  for (let i = 0; i < ladder.length; i++) {
+    const provider = getProvider(ladder[i]);
+    try {
+      const editedPage = await runEditAttempt(page, instruction, targetBlockId, provider, options);
+      return {
+        page: editedPage,
+        model: provider.model,
+        complexity: classification.complexity,
+        escalated: i > 0,
+      };
+    } catch (error) {
+      lastError = error;
+      const canEscalate = route && i < ladder.length - 1 && isRecoverable(error);
+      if (!canEscalate) throw error;
+      console.warn(
+        `[editPage] ${provider.model} could not apply the edit (${
+          error instanceof PageGenerationError ? error.stage : "error"
+        }); escalating to ${ladder[i + 1]}.`,
+      );
+    }
+  }
+  throw lastError;
+}
+
+/**
+ * One edit attempt against one provider: call the tool, repair id stability, validate. Throws a
+ * PageGenerationError on any failure so the caller can decide whether to escalate. Extracted so
+ * editPage's routing loop can retry it against a stronger model.
+ */
+async function runEditAttempt(
+  page: Page,
+  instruction: string,
+  targetBlockId: string | undefined,
+  provider: ReturnType<typeof getProvider>,
+  options: EditPageOptions,
 ): Promise<Page> {
   const { failOnMassIdLoss = true } = options;
-  const provider = getProvider();
 
   const turns: LlmTurn[] = [
     { role: "user", text: buildEditUserMessage(page, instruction, targetBlockId) },

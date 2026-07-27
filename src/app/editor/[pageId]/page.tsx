@@ -76,6 +76,15 @@ type SaveState =
  * hiccup); a raw provider JSON blob in the chat reads as broken, so map the known classes to
  * plain language and keep everything else short.
  */
+/** Turns a routed model id into a short label so the chat can show the cost-optimised routing. */
+function friendlyModel(model: string | undefined): string | null {
+  if (!model) return null;
+  if (model.includes("haiku")) return "Haiku — fast & low-cost";
+  if (model.includes("sonnet")) return "Sonnet — balanced";
+  if (model.includes("opus")) return "Opus — top quality";
+  return model;
+}
+
 function friendlyEditError(raw: string): string {
   const m = raw.toLowerCase();
   if (m.includes("api key") || m.includes("api_key") || m.includes("503") || m.includes("not configured")) {
@@ -285,7 +294,14 @@ export default function EditorPage({ params }: { params: Promise<{ pageId: strin
         setCanvasVersion((v) => v + 1);
         setDirty(true);
         setSaveState({ kind: "ok", message: "AI edit applied — review and publish" });
-        return { ok: true, message: "Done — I updated the page. Review it and hit Publish." };
+
+        // Show which model handled it — a simple edit is routed to a cheaper model.
+        const modelLabel = friendlyModel(body.model);
+        const routed = modelLabel ? ` Handled by ${modelLabel}.` : "";
+        return {
+          ok: true,
+          message: `Done — I updated the page.${routed} Review it and hit Publish.`,
+        };
       } catch (error) {
         const raw = error instanceof Error ? error.message : "AI edit failed";
         const friendly = friendlyEditError(raw);

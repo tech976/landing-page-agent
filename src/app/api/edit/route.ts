@@ -103,9 +103,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const edited = await editPage(page, instruction, targetBlockId);
-    const saved = await savePage(edited);
-    return NextResponse.json({ page: saved }, { status: 200 });
+    const result = await editPage(page, instruction, targetBlockId);
+    const saved = await savePage(result.page);
+    // Surface which model tier handled the edit so the UI can show the cost-optimised routing
+    // (Haiku for trivial edits, Opus for complex ones).
+    return NextResponse.json(
+      {
+        page: saved,
+        model: result.model,
+        complexity: result.complexity,
+        escalated: result.escalated,
+      },
+      { status: 200 },
+    );
   } catch (error) {
     if (error instanceof PageGenerationError) {
       const status =

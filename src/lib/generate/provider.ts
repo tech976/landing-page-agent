@@ -512,7 +512,7 @@ let cachedProviderKey = "";
  *
  * @throws {PageGenerationError} stage "missing-api-key" when the selected provider has no key.
  */
-export function getProvider(): LlmProvider {
+export function getProvider(anthropicModelOverride?: string): LlmProvider {
   const name = resolveProviderName();
 
   if (name === "groq") {
@@ -539,7 +539,10 @@ export function getProvider(): LlmProvider {
   // Throws the long-standing ANTHROPIC_API_KEY message when the key is absent.
   getAnthropicClient();
 
-  const model = process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
+  // The override lets the edit router pick a per-edit model (Haiku/Sonnet/Opus). The cache is
+  // keyed by model, so each tier gets its own cached client.
+  const model =
+    anthropicModelOverride?.trim() || process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
   const key = `anthropic:${model}`;
   if (!cachedProvider || cachedProviderKey !== key) {
     cachedProvider = new AnthropicProvider(model);
