@@ -335,6 +335,55 @@
   }
 }
 
+/* ── Shiny CTA gleam ──────────────────────────────────────────
+   A periodic light sweep across a CTA to catch the eye on cold traffic.
+   Opt in per CTA via CtaSpec.shine (renders as the `lp-cta-shine` class).
+   DESIGN-SYSTEM §5.4 — like `pulse`, at most one such CTA per viewport.
+   The band is a translucent white diagonal that sweeps left→right, then
+   rests off-screen for the remainder of the cycle so it reads as an
+   occasional glint rather than a constant animation. */
+.lp-cta-shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.lp-cta-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    oklch(1 0 0 / 0.28) 44%,
+    oklch(1 0 0 / 0.65) 50%,
+    oklch(1 0 0 / 0.28) 56%,
+    transparent 70%
+  );
+  background-repeat: no-repeat;
+  background-size: 220% 100%;
+  background-position: -60% 0;
+  animation: cta-gleam 4.2s var(--ease-out-soft) infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes cta-gleam {
+  0% {
+    background-position: -60% 0;
+  }
+  /* Sweep completes by 42% of the cycle, then holds off-screen the rest. */
+  42%,
+  100% {
+    background-position: 170% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No glint at all under reduced motion — a frozen half-swept band is worse than none. */
+  .lp-cta-shine::after {
+    display: none;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════════
    §3  STYLE PERSONALITY PRESETS
    Applied FIRST in the cascade, via `data-lp-personality` on the page root. Explicit

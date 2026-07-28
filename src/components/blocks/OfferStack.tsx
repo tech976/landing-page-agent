@@ -358,6 +358,7 @@ function OfferCta({
         CTA_BASE,
         skin,
         offer.cta.pulse && "motion-safe:animate-[var(--animate-cta-pulse)]",
+        offer.cta.shine && "lp-cta-shine",
       )}
     >
       {CtaIcon ? <CtaIcon className="size-5 shrink-0" aria-hidden="true" strokeWidth={2.5} /> : null}
@@ -522,6 +523,7 @@ function ctaField<T>(label: string): Field<T> {
       icon: { type: "select", label: "Icon", options: ICON_OPTIONS },
       fullWidth: { type: "radio", label: "Full width", options: BOOL_OPTIONS },
       pulse: { type: "radio", label: "Pulse (max one per viewport)", options: BOOL_OPTIONS },
+      shine: { type: "radio", label: "Shine — gleam sweep (max one per viewport)", options: BOOL_OPTIONS },
       action: {
         type: "object",
         label: "Destination",
@@ -690,6 +692,7 @@ export const offerStackPuckConfig: Omit<ComponentConfig<OfferStackProps>, "rende
           label: "Buy 1 Bottle",
           variant: "outline",
           pulse: false,
+          shine: false,
           action: { kind: "shopify", productId: "", quantity: 1, mode: "direct-checkout" },
         },
       },
@@ -712,6 +715,7 @@ export const offerStackPuckConfig: Omit<ComponentConfig<OfferStackProps>, "rende
           variant: "solid",
           tone: "brand",
           pulse: false,
+          shine: false,
           action: { kind: "shopify", productId: "", quantity: 1, mode: "direct-checkout" },
         },
       },

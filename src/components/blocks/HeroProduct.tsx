@@ -931,6 +931,7 @@ function CtaButton({
           "h-14 min-h-14 w-full px-8 text-lg sm:w-auto",
           cta.fullWidth !== false && "sm:w-full",
           cta.pulse && "motion-safe:animate-[var(--animate-cta-pulse)]",
+          cta.shine && "lp-cta-shine",
         )}
       >
         {CtaIcon ? <CtaIcon className="size-5 shrink-0" aria-hidden="true" strokeWidth={2.5} /> : null}
@@ -1074,6 +1075,7 @@ function ctaField<T>(label: string): Field<T> {
       icon: { type: "select", label: "Icon", options: ICON_OPTIONS },
       fullWidth: { type: "radio", label: "Full width on desktop", options: BOOL_OPTIONS },
       pulse: { type: "radio", label: "Pulse (max one per viewport)", options: BOOL_OPTIONS },
+      shine: { type: "radio", label: "Shine — gleam sweep (max one per viewport)", options: BOOL_OPTIONS },
       action: { type: "object", label: "Destination", objectFields: checkoutActionObjectFields() },
     },
   } as unknown as Field<T>;
@@ -1288,6 +1290,7 @@ export const heroProductPuckConfig: Omit<ComponentConfig<HeroProductProps>, "ren
       tone: "brand",
       icon: "zap",
       pulse: false,
+      shine: true,
       action: {
         kind: "shopify",
         productId: "",

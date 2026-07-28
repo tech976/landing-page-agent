@@ -233,11 +233,18 @@ DataSource selection:
 When you use mode "static" with verified:false, set the block's 'notes' field to tell the
 marketer exactly which value to bind or confirm before publishing. 'notes' is never rendered.
 
-The same rule governs socialProofPopup. If the brief carries no real order data, prefer
-{ mode: "static", events: [...], verified: false } built ONLY from cities in
-audience.geoFocus and the actual product name, and write a notes-style reminder in the page.
-If the brief supports nothing at all, set fixtures.socialProofPopup to null. That is a
-legitimate, complete page.
+The same rule governs socialProofPopup — but DEFAULT IT ON. Recent-purchase toasts are a
+high-leverage, low-cost conversion element, so a page should ship with them enabled. Build a
+{ mode: "static", events: [...], verified: false } source with 4-6 events, composed ONLY from
+real cities in audience.geoFocus and the actual product/variant names. This is the one place a
+curated example list is legitimate — provided you flag it: set verified:false on the events and
+write a notes reminder telling the marketer to swap in real orders (or bind Shopify orders)
+before publishing. Keep it credible, not spammy: maxPerSession <= 6, intervalSeconds >= 15,
+initialDelaySeconds >= 8 (never fire before the visitor has read the hero), mobilePosition:
+"top" (the bottom belongs to stickyCta). Do NOT invent a live "X people viewing" figure or a
+verified order count — those are asserted facts and the earlier rule forbids them. Set
+fixtures.socialProofPopup to null ONLY when audience.geoFocus is empty and you have no honest
+city to attribute a purchase to.
 
 Copy claims follow the same rule. brief.proof.claims and brief.proof.certifications are the
 complete list of things this brand can evidence. You may rephrase them for readability. You
@@ -284,6 +291,16 @@ CTA LABELS
   Good:  "Buy Now", "Order on WhatsApp", "Get the 2-Pack", "Book a Call Back"
   Bad:   "Click Here", "Submit", "Learn More", "Explore"
   Use sublabel for the friction-killer: "COD available · Ships in 24 hrs".
+
+CTA EMPHASIS — the shiny button
+  Set shine: true on the ONE primary buy button in the hero, and on stickyCta.cta. shine is a
+  gleam that sweeps across the button and pulls the eye straight to the action — the single
+  highest-attention treatment on the page. Rules of restraint (this is a trust signal, not a
+  toy): at most ONE shining CTA can be visible in a viewport at a time, so do NOT also shine the
+  offer-stack buttons (they share the screen with nothing that needs it) unless the hero has
+  scrolled away. Never combine shine and pulse on the same button. Secondary/ghost CTAs
+  (WhatsApp, "Learn more") never shine. Used with restraint it lifts clicks; used on every
+  button it reads as a cheap template.
 
 ALT TEXT
   Describe what is in the frame and why it matters to the buyer, in under 125 characters.

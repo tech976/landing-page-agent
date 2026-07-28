@@ -258,6 +258,13 @@ export const CtaSpecSchema = z.object({
   fullWidth: z.boolean().optional(),
   /** DESIGN-SYSTEM §5.4 — maximum ONE pulsing element per viewport. */
   pulse: z.boolean().default(false),
+  /**
+   * A periodic light "gleam" that sweeps across the button to draw the eye — the
+   * shiny-CTA treatment. Like `pulse`, use at most one attention-grabbing CTA per
+   * viewport; reserve it for the single primary action (hero / sticky bar / the
+   * recommended offer). Honours prefers-reduced-motion.
+   */
+  shine: z.boolean().default(false),
 });
 
 export const TrustChipSchema = z.object({

@@ -188,6 +188,8 @@ const rawMockPage = {
           variant: "solid",
           tone: "brand",
           icon: "zap",
+          // The single shiny primary action in the first viewport — a gleam sweep to catch the eye.
+          shine: true,
           action: {
             kind: "shopify",
             productId: "8412009",
@@ -1083,6 +1085,8 @@ const rawMockPage = {
       cta: {
         label: "Buy Now",
         variant: "solid",
+        // The persistent bottom-bar CTA gleams so the buy action stays magnetic on scroll.
+        shine: true,
         action: {
           kind: "shopify",
           productId: "8412009",

@@ -387,6 +387,7 @@ export default function StickyCta({
           "focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
           CTA_TONE[tone],
           cta.pulse && "motion-safe:animate-[var(--animate-cta-pulse)]",
+          cta.shine && "lp-cta-shine",
         )}
       >
         {CtaIcon ? <CtaIcon aria-hidden="true" className="size-5" /> : null}
@@ -504,6 +505,7 @@ export const stickyCtaPuckConfig: PuckBlockConfig = {
         sublabel: { type: "text", label: "Sublabel" },
         icon: { type: "select", label: "Icon", options: ICON_OPTIONS },
         pulse: { type: "radio", label: "Pulse (max one per viewport)", options: YES_NO },
+        shine: { type: "radio", label: "Shine — gleam sweep (max one per viewport)", options: YES_NO },
       },
     },
     secondaryIconCta: {
@@ -549,6 +551,7 @@ export const stickyCtaPuckConfig: PuckBlockConfig = {
       label: "Buy Now",
       variant: "solid",
       pulse: false,
+      shine: true,
       action: { kind: "url", href: "#offer-stack", target: "_self" },
     },
     secondaryIconCta: null,
